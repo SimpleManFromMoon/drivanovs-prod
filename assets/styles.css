@@ -1,0 +1,191 @@
+/* ====== Minimal Health Practice Theme (RU/LV/EN ready) ======
+   Philosophy: quiet grayscale UI + one accent for primary actions.
+   Accent is used ONLY for "Book / Rezervēt / Записаться".
+   Everything else stays calm and consistent.
+*/
+
+:root{
+  /* Grays */
+  --bg-0: #f7f7f8;      /* page background */
+  --bg-1: #ffffff;      /* cards */
+  --line: #e6e7ea;      /* hairline borders */
+  --text: #1e2328;      /* main text */
+  --muted: #6e7781;     /* secondary text */
+  --muted-2: #9aa3ab;
+
+  /* Accent (change in 1 place for rebranding) */
+  --accent: #2f7e79;     /* calm teal */
+  --accent-600: #296f6b;
+  --accent-700: #225f5b;
+
+  /* Focus ring */
+  --ring: rgba(47,126,121,.35);
+
+  /* Link color (accessible contrast, harmonious with accent) */
+  --link: #2f76b7;
+  --link-visited: #235b8a;
+  /* NEW: darker shades for hover/active of primary CTA */
+  --link-600: #2769a1;
+  --link-700: #205987;
+
+  /* Radius & shadow */
+  --r-lg: 16px;
+  --r-xl: 20px;
+  --shadow-1: 0 6px 24px rgba(0,0,0,.06);
+  --shadow-2: 0 10px 30px rgba(0,0,0,.10);
+}
+
+/* Base */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font:16px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  color:var(--text);
+  background:var(--bg-0);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+.container{max-width:1080px;margin:28px auto;padding:0 18px}
+
+/* Typographic rhythm */
+h1{font-size:clamp(28px,3.6vw,40px);line-height:1.15;margin:.2em 0 .5em;font-weight:800;letter-spacing:-.01em}
+h2{font-size:clamp(22px,2.4vw,28px);line-height:1.2;margin:1.1em 0 .5em;font-weight:700}
+h3{font-size:clamp(18px,1.8vw,20px);line-height:1.25;margin:1em 0 .4em;font-weight:700}
+.p{margin:.75em 0}
+
+/* Cards & layout */
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-1);padding:18px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+@media (max-width:960px){ .grid{grid-template-columns:1fr} }
+
+/* Nav */
+header{display:flex;gap:14px;align-items:center;margin-bottom:12px}
+nav{display:flex;gap:14px;flex-wrap:wrap}
+nav a{
+  color:var(--text);
+  text-decoration:none;
+  padding:8px 10px;
+  border-radius:12px;
+  font-weight:600;
+  border:1px solid transparent;
+  position:relative;           /* NEW: for active underline */
+}
+nav a:hover{background:#fff;border-color:var(--line);box-shadow:var(--shadow-1)}
+
+/* Nav active link */
+nav a.is-active{
+  color:var(--link);
+  font-weight:800;
+}
+nav a.is-active::after{
+  content:"";
+  position:absolute; left:10px; right:10px; bottom:4px; height:3px;
+  background:var(--link); border-radius:3px;
+}
+
+.lang-switch{margin-left:auto;display:flex;gap:8px}
+
+.lang-switch button {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 4px 10px;
+  margin: 0 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lang-switch button:hover {
+  background: #f0f0f0;
+}
+
+.lang-switch button.active {
+  border: 2px solid var(--link);
+  background: #e6f0ff;
+  font-weight: bold;
+}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  font-weight:700;border-radius:999px;border:1px solid var(--line);
+  padding:.9rem 1.2rem;background:#fff;color:var(--text);text-decoration:none;transition:box-shadow .15s,transform .05s,filter .15s}
+.btn:hover{box-shadow:var(--shadow-1);filter:brightness(1.02)}
+.btn:active{transform:translateY(1px) scale(.995)}
+.btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+
+/* Booking button (primary) */
+.btn-primary{
+  background: var(--link);
+  border-color: var(--link);
+  color:#fff !important;        /* белый текст */
+  text-decoration:none !important;
+}
+.btn-primary:hover{
+  background:var(--link-600);
+  border-color:var(--link-600);
+}
+.btn-primary:active{
+  background:var(--link-700);
+  border-color:var(--link-700);
+}
+
+/* Outline buttons */
+.btn, .btn-outline{
+  text-decoration:none !important;  /* убрали подчёркивание */
+}
+
+/* Inputs */
+.input, select, textarea{
+  width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--text);
+}
+.input:focus, select:focus, textarea:focus{outline:3px solid var(--ring);border-color:transparent}
+
+/* Links */
+a{color:var(--link)}
+a:visited{color:var(--link-visited)}
+a:hover{filter:brightness(1.05)}
+
+/* Notices */
+.notice{padding:12px 14px;border-radius:14px;margin-top:12px;border:1px solid var(--line)}
+.notice.ok{background:#e9f7ef;color:#245c47;border-color:#c6ead7}
+.notice.err{background:#fff4f4;color:#7b2b2b;border-color:#f1d0d0}
+.muted{color:var(--muted)}
+
+/* Calendar */
+.controls{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.iconbtn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 10px;cursor:pointer}
+.iconbtn:hover{background:#fafafa}
+#calendar{padding:10px}
+#calendar table{width:100%;border-collapse:separate;border-spacing:8px}
+#calendar th{color:var(--muted);font-weight:600;text-align:left}
+#calendar td{
+  height:70px;background:#fff;border:1px solid var(--line);border-radius:14px;position:relative;
+  transition:box-shadow .15s, background .15s, border-color .15s;
+}
+#calendar td:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}
+#calendar td.active{outline:2px solid #95b7aa;outline-offset:2px}
+#calendar td.other-month{opacity:.38}
+#calendar td.today{box-shadow:inset 0 0 0 2px #cfe3df}
+
+#calendar td.has-slots::after{
+  content:"";position:absolute;left:10px;bottom:10px;width:8px;height:8px;border-radius:50%;background:#2f7e79;
+}
+
+/* Day slots */
+#day-slots{display:flex;flex-wrap:wrap;gap:10px;min-height:40px}
+.chip{border:1px solid var(--line);background:#f4f6f7;border-radius:999px;padding:8px 14px;cursor:pointer}
+.chip:hover{filter:brightness(1.04)}
+.chip.active{outline:2px solid #95b7aa}
+.chip.disabled{opacity:.45;pointer-events:none;filter:grayscale(1)}
+
+/* Footer */
+footer{color:var(--muted);margin:30px 0}
+
+/* Hero section (homepage) */
+.hero{
+  display:grid;grid-template-columns:1.4fr 1fr;gap:22px;align-items:center;
+}
+.hero .lead{font-size:clamp(18px,2vw,20px);color:var(--muted)}
+.hero .cta{display:flex;gap:12px;flex-wrap:wrap}
+@media (max-width:960px){ .hero{grid-template-columns:1fr} }

@@ -1,0 +1,100 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title data-i18n="site.title">Запись на приём</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/config.js"></script>
+  <script src="assets/i18n.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <nav>
+        <a href="index.html" data-i18n="nav.home"></a>
+        <a href="about.html" data-i18n="nav.about"></a>
+        <a href="rules.html" data-i18n="nav.rules"></a>
+        <a href="booking.html" class="is-active" data-i18n="nav.booking"></a>
+      </nav>
+      <div class="lang-switch" style="margin-left:auto">
+        <button data-lang="ru">RU</button>
+        <button data-lang="lv">LV</button>
+        <button data-lang="en">EN</button>
+      </div>
+    </header>
+
+    <h1 data-i18n="site.title">Запись на приём</h1>
+    <p class="muted" data-i18n="booking.hint"></p>
+
+    <div class="card grid">
+      <section>
+        <div class="controls">
+          <button id="prev" class="iconbtn">←</button>
+          <button id="next" class="iconbtn">→</button>
+          <div style="margin-left:8px;font-weight:700" id="month-label"></div>
+        </div>
+        <div id="calendar">
+          <table>
+            <thead><tr>
+              <th>Пн</th><th>Вт</th><th>Ср</th><th>Чт</th><th>Пт</th><th>Сб</th><th>Вс</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <p class="muted" data-i18n-md="booking.legend_md"></p>
+        </div>
+      </section>
+      <aside>
+        <h3 data-i18n="booking.available"></h3>
+        <div id="day-slots"></div>
+        <p class="muted"><span data-i18n="booking.chosen"></span> <strong id="chosen"></strong></p>
+      </aside>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <form id="booking-form" onsubmit="submitBooking(event)" novalidate>
+        <!-- honeypot -->
+        <input type="text" name="website" style="position:absolute;left:-5000px;top:auto;width:1px;height:1px;opacity:0" tabindex="-1" autocomplete="off">
+
+        <div class="row2">
+          <label><span data-i18n="form.name"></span><br>
+            <input class="input" type="text" name="name" required>
+          </label>
+          <label><span data-i18n="form.email"></span><br>
+            <input class="input" type="email" name="email" required>
+          </label>
+        </div>
+        <div class="row2" style="margin-top:12px">
+          <label><span data-i18n="form.phone"></span><br>
+            <input class="input" type="tel" name="phone" placeholder="+371 ..." pattern="^\+?[0-9\s\-()]{7,20}$">
+          </label>
+          <label><span data-i18n="form.mode"></span><br>
+            <select class="input" name="mode">
+              <option value="in_person" data-i18n="form.mode.inperson">Очный визит</option>
+              <option value="online" data-i18n="form.mode.online">Онлайн (Google Meet)</option>
+            </select>
+          </label>
+        </div>
+        <div class="row2" style="margin-top:12px">
+          <label>Дата<br><input class="input" name="date" readonly required></label>
+          <label>Время<br><input class="input" name="time" readonly required></label>
+        </div>
+        <div style="margin-top:12px">
+          <label><span data-i18n="form.notes"></span><br>
+            <textarea class="input" name="notes" maxlength="600" placeholder="Коротко о запросе (до 600 символов)"></textarea>
+          </label>
+        </div>
+        <button class="btn" type="submit" style="margin-top:16px" data-i18n="form.submit">Забронировать</button>
+        <div id="booking-out"></div>
+      </form>
+    </div>
+
+    <footer>© <span id="year"></span></footer>
+  </div>
+
+  <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+  <script src="assets/calendar.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
