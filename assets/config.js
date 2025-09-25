@@ -10,7 +10,7 @@
     },
     prod: {
       ORIGIN: 'https://drivanovs.lv',
-      ENDPOINT: 'https://script.google.com/macros/s/DEPLOY_ID_PROD/exec'
+      ENDPOINT: 'https://script.google.com/macros/s/AKfycbwtrFTBOOS28Ih8TGzde9O8xK2Z51PDo8WMieGDlzwDFcnxQcJ8h7DrVU2zccsDKr3eZQ/exec'
     }
   };
   window.APP_CONFIG = CONFIG_MAP[ENV];
