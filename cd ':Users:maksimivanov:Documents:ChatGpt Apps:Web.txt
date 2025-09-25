@@ -1,2 +1,2 @@
-cd '/Users/maksimivanov/Documents/ChatGpt Apps/WebApp/v2/booking_full_release'
+cd '/Users/maksimivanov/Documents/ChatGpt Apps/WebApp/Dev'
 python3 -m http.server 8080
