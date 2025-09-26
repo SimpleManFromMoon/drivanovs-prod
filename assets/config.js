@@ -6,11 +6,11 @@
   const CONFIG_MAP = {
     local: {
       ORIGIN: 'http://localhost:8080',
-      ENDPOINT: 'https://script.google.com/macros/s/AKfycbyoyMIdCrycgTxtXMYQAhBsNelw_UB17LJvU7bTVrnLADFAFrqMA_sXYleqMYEHRKM8AQ/exec'
+      ENDPOINT: 'https://script.google.com/macros/s/AKfycbz69WCd7lRu4gj4kemHyS3FbfpuZFZkj_kJ51e4PzrvQ9s2xvRw0ZSDVNq_KHWPeBsnuA/exec'
     },
     prod: {
-      ORIGIN: 'https://drivanovs.lv',
-      ENDPOINT: 'https://script.google.com/macros/s/AKfycbyoyMIdCrycgTxtXMYQAhBsNelw_UB17LJvU7bTVrnLADFAFrqMA_sXYleqMYEHRKM8AQ/exec'
+      ORIGIN: 'https://simplemanfrommoon.github.io/drivanovs-prod/',
+      ENDPOINT: 'https://script.google.com/macros/s/AKfycbz69WCd7lRu4gj4kemHyS3FbfpuZFZkj_kJ51e4PzrvQ9s2xvRw0ZSDVNq_KHWPeBsnuA/exec'
     }
   };
   window.APP_CONFIG = CONFIG_MAP[ENV];
