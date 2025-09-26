@@ -1,9 +1,10 @@
-
 // assets/calendar.js
 (function(){
   window.state = window.state || { current: new Date(), slotsByDate:{}, selected:null };
   window.SLOTS_CACHE = window.SLOTS_CACHE || {};
-
+  const INFLIGHT = {};        // { monthKey: {script, cbName, timer} }
+  const RETRY_MS = 5000;      // повтор через 5 c при ошибке
+  const TIMEOUT_MS = 10000;   // таймаут JSONP 10 c
   const $ = (s)=>document.querySelector(s);
   const $$ = (s)=>Array.from(document.querySelectorAll(s));
   const pad = (n)=>String(n).padStart(2,'0');
@@ -49,11 +50,11 @@
   function attachHandlers(){
     $('#prev')?.addEventListener('click',()=>{
       state.current = new Date(state.current.getFullYear(), state.current.getMonth()-1, 1);
-      buildGrid(); loadMonth(false);
+      buildGrid(); loadMonth(true);
     });
     $('#next')?.addEventListener('click',()=>{
       state.current = new Date(state.current.getFullYear(), state.current.getMonth()+1, 1);
-      buildGrid(); loadMonth(false);
+      buildGrid(); loadMonth(true);
     });
     document.addEventListener('click',(e)=>{
       const td = e.target.closest('#calendar td[data-date]'); if(!td) return;
@@ -63,11 +64,53 @@
     });
   }
 
-  function loadSlots(from,to,cb){
-    const old = document.getElementById('jsonp-slots'); if(old) old.remove();
-    const s=document.createElement('script');
-    s.id='jsonp-slots';
-    s.src = `${APP_CONFIG.ENDPOINT}?action=slots&from=${from}&to=${to}&callback=${cb}&v=${Date.now()}`;
+  function loadSlotsJSONP(from, to, monthKey){
+    if (INFLIGHT[monthKey]) return;
+
+    // <-- вот эти две строки новые
+    const safeKey = String(monthKey).replace(/[^0-9A-Za-z_]/g, '_'); // '2025-09' -> '2025_09'
+    const cbName  = `__onSlots_${safeKey}_${Date.now()}`;
+
+    const s = document.createElement('script');
+    s.id = `jsonp-slots-${safeKey}`;
+    s.src = `${APP_CONFIG.ENDPOINT}?action=slots&from=${from}&to=${to}`
+          + `&callback=${cbName}&v=${Date.now()}`;
+
+    const cleanup = () => {
+      if (INFLIGHT[monthKey]?.timer) clearTimeout(INFLIGHT[monthKey].timer);
+      try { delete window[cbName]; } catch(_) {}
+      s.remove();
+      delete INFLIGHT[monthKey];
+    };
+
+    window[cbName] = function(payload){
+      if (monthKeyOf(state.current) === monthKey) {
+        const map = {};
+        (payload?.days || []).forEach(d => map[d.date] = d.slots || []);
+        SLOTS_CACHE[monthKey] = map;
+        state.slotsByDate = map;
+        paintDots();
+        if (state.selected?.date) renderDaySlots(state.selected.date);
+      }
+      cleanup();
+    };
+
+    s.onerror = () => {
+      console.warn('[slots] JSONP error for', monthKey);
+      cleanup();
+      if (monthKeyOf(state.current) === monthKey) {
+        setTimeout(() => loadSlotsJSONP(from, to, monthKey), RETRY_MS);
+      }
+    };
+
+    INFLIGHT[monthKey] = {
+      script: s,
+      timer: setTimeout(() => {
+        console.warn('[slots] JSONP timeout for', monthKey);
+        s.dispatchEvent(new Event('error'));
+      }, TIMEOUT_MS)
+    };
+
     document.body.appendChild(s);
   }
 
@@ -79,14 +122,7 @@
     }
     const from = ymd(startOfMonth(state.current));
     const to   = ymd(endOfMonth(state.current));
-    loadSlots(from,to,'__onSlots');
-  };
-
-  window.__onSlots = function(payload){
-    const key = monthKeyOf(state.current);
-    const map={}; (payload?.days||[]).forEach(d=>map[d.date]=d.slots||[]);
-    SLOTS_CACHE[key]=map; state.slotsByDate=map; paintDots();
-    if(state.selected?.date) renderDaySlots(state.selected.date);
+    loadSlotsJSONP(from,to,key);
   };
 
   window.loadDaySlots = function(dateStr){
@@ -112,7 +148,7 @@
     });
   }
 
-  // локально удалить слот (после брони)
+  // локально удалить слот после брони (чтобы сразу пропал)
   window.locallyRemoveSlot = function(dateStr, timeStr){
     if(state.slotsByDate[dateStr]){
       state.slotsByDate[dateStr] = state.slotsByDate[dateStr].filter(x=>x!==timeStr);
@@ -128,18 +164,18 @@
     buildGrid(); attachHandlers(); loadMonth(false);
   });
 
+  // обновляем только при возвращении на вкладку И только если нет запроса
   document.addEventListener('visibilitychange', ()=>{
     if (document.visibilityState === 'visible'){
-      if (typeof loadMonth==='function') loadMonth(true);
-      if (state.selected?.date && typeof loadDaySlots==='function') loadDaySlots(state.selected.date);
+      const key = monthKeyOf(state.current);
+      if (!INFLIGHT[key]) loadMonth(true);
+      if (state.selected?.date) renderDaySlots(state.selected.date);
     }
   });
 
+  // лёгкий авторефреш выбранного дня (не трогая месяц)
   setInterval(()=>{
-    if (state.selected?.date){
-      if (typeof loadDaySlots==='function') loadDaySlots(state.selected.date);
-    }
-  }, 30000); // каждые 30 секунд
-
+    if (state.selected?.date) renderDaySlots(state.selected.date);
+  }, 30000);
 
 })();
