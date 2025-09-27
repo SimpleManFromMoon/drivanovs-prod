@@ -140,5 +140,23 @@
     "ru": "- Оплата до визита.\n- Отмена за **24 часа**.\n- Онлайн — Google Meet.",
     "lv": "- Apmaksa pirms vizītes.\n- Atcelšana **24 h** iepriekš.\n- Tiešsaistē — Google Meet.",
     "en": "- Payment before the session.\n- Cancellation **24 h** in advance.\n- Online — Google Meet."
+  },
+  "ru": {
+    "nextslot.title": "Ближайшая запись",
+    "next_slot_prefix": "Доступна",
+    "next_slot_cta": "Перейти",
+    "next_slot_none": "Свободных записей нет в ближайшие дни"
+  },
+  "lv": {
+    "nextslot.title": "Tuvākais brīvais laiks",
+    "next_slot_prefix": "Pieejams",
+    "next_slot_cta": "Pāriet",
+    "next_slot_none": "Tuvākajās dienās brīvu laiku nav"
+  },
+  "en": {
+    "nextslot.title": "Next available",
+    "next_slot_prefix": "Available",
+    "next_slot_cta": "Go",
+    "next_slot_none": "No free slots soon"
   }
 }
