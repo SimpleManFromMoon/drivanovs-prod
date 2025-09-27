@@ -1,236 +1,128 @@
-/* ====== Minimal Health Practice Theme (RU/LV/EN ready) ======
-   Philosophy: quiet grayscale UI + one accent for primary actions.
-   Accent is used ONLY for "Book / Rezervēt / Записаться".
-   Everything else stays calm and consistent.
-*/
-
+/* Базовые переменные и типографика */
 :root{
-  /* Grays */
-  --bg-0: #f7f7f8;      /* page background */
-  --bg-1: #ffffff;      /* cards */
-  --line: #e6e7ea;      /* hairline borders */
-  --text: #1e2328;      /* main text */
-  --muted: #6e7781;     /* secondary text */
-  --muted-2: #9aa3ab;
-
-  /* Accent (change in 1 place for rebranding) */
-  --accent: #2f7e79;     /* calm teal */
-  --accent-600: #296f6b;
-  --accent-700: #225f5b;
-
-  /* Focus ring */
-  --ring: rgba(47,126,121,.35);
-
-  /* Link color (accessible contrast, harmonious with accent) */
-  --link: #2f76b7;
-  --link-visited: #235b8a;
-  /* NEW: darker shades for hover/active of primary CTA */
-  --link-600: #2769a1;
-  --link-700: #205987;
-
-  /* Radius & shadow */
-  --r-lg: 16px;
-  --r-xl: 20px;
-  --shadow-1: 0 6px 24px rgba(0,0,0,.06);
-  --shadow-2: 0 10px 30px rgba(0,0,0,.10);
+  --bg:#f6f7f8;
+  --card:#fff;
+  --text:#1f2a37;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --link:#2563eb;           /* синий акцент */
+  --ring: rgba(37,99,235,.15);
+  --radius:16px;
 }
 
-/* Base */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
-  font:16px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+  background:var(--bg);
   color:var(--text);
-  background:var(--bg-0);
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  font:16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
 }
-.container{max-width:1080px;margin:28px auto;padding:0 18px}
+h1{font-size:40px; line-height:1.1; margin:0 0 8px}
+.h3{margin:12px 0 6px; font-size:18px}
 
-/* Typographic rhythm */
-h1{font-size:clamp(28px,3.6vw,40px);line-height:1.15;margin:.2em 0 .5em;font-weight:800;letter-spacing:-.01em}
-h2{font-size:clamp(22px,2.4vw,28px);line-height:1.2;margin:1.1em 0 .5em;font-weight:700}
-h3{font-size:clamp(18px,1.8vw,20px);line-height:1.25;margin:1em 0 .4em;font-weight:700}
-.p{margin:.75em 0}
+/* Контейнер */
+.container{max-width:1100px;margin:0 auto;padding:24px 20px}
 
-/* Cards & layout */
-.card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow-1);padding:18px}
-.grid{display:grid;grid-template-columns:2fr 1fr;gap:18px}
-@media (max-width:960px){ .grid{grid-template-columns:1fr} }
-
-/* Nav */
-header{display:flex;gap:14px;align-items:center;margin-bottom:12px}
-nav{display:flex;gap:14px;flex-wrap:wrap}
+/* Header */
+header{display:flex;align-items:center;gap:16px;margin-bottom:8px}
+nav{display:flex;gap:24px}
 nav a{
-  color:var(--text);
-  text-decoration:none;
-  padding:8px 10px;
-  border-radius:12px;
-  font-weight:600;
-  border:1px solid transparent;
-  position:relative;           /* NEW: for active underline */
-}
-nav a:hover{background:#fff;border-color:var(--line);box-shadow:var(--shadow-1)}
-
-/* Nav active link */
-nav a.is-active{
-  color:var(--link);
-  font-weight:800;
+  color:var(--text); text-decoration:none; font-weight:600; position:relative;
 }
 nav a.is-active::after{
-  content:"";
-  position:absolute; left:10px; right:10px; bottom:4px; height:3px;
-  background:var(--link); border-radius:3px;
+  content:""; position:absolute; left:0; right:0; bottom:-8px; height:3px; border-radius:3px; background:var(--link);
 }
-
-.lang-switch{margin-left:auto;display:flex;gap:8px}
-
-.lang-switch button {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 4px 10px;
-  margin: 0 3px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.lang-switch{display:flex;gap:12px}
+.lang-switch button{
+  border:1px solid var(--line); background:#fff; border-radius:12px; padding:8px 14px; cursor:pointer;
 }
+.lang-switch button.is-active{border-color:var(--link); box-shadow:0 0 0 3px var(--ring)}
 
-.lang-switch button:hover {
-  background: #f0f0f0;
+/* Карточки */
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:0 1px 2px rgba(17,24,39,.04), 0 8px 20px rgba(17,24,39,.06);
+  padding:24px;            /* одинаковые отступы со всех сторон */
+  margin-top:16px;
 }
-
-.lang-switch button.active {
-  border: 2px solid var(--link);
-  background: #e6f0ff;
-  font-weight: bold;
-}
-
-.next-slot {
-  margin: 12px 0 20px;
-  padding: 12px 16px;
-  border: 1px solid var(--card-border, #e5e7eb);
-  background: var(--card-bg, #f8fafc);
-  border-radius: 14px;
-}
-
-.next-slot__row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.next-slot__icon {
-  font-size: 22px;
-  line-height: 1;
-}
-
-.next-slot__title {
-  font-weight: 600;
-  margin-bottom: 2px;
-}
-
-.next-slot__desc {
-  color: var(--muted, #64748b);
-  font-size: 14px;
-}
-
-.next-slot__btn {
-  margin-left: auto;
-}
-
-.hidden { display: none !important; }
-
-/* на мобильных кнопка вниз */
-@media (max-width: 640px) {
-  .next-slot__row {
-    align-items: flex-start;
-  }
-  .next-slot__btn {
-    margin-left: 0;
-  }
-}
-
-/* Buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
-  font-weight:700;border-radius:999px;border:1px solid var(--line);
-  padding:.9rem 1.2rem;background:#fff;color:var(--text);text-decoration:none;transition:box-shadow .15s,transform .05s,filter .15s}
-.btn:hover{box-shadow:var(--shadow-1);filter:brightness(1.02)}
-.btn:active{transform:translateY(1px) scale(.995)}
-.btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
-
-/* Booking button (primary) */
-.btn-primary{
-  background: var(--link);
-  border-color: var(--link);
-  color:#fff !important;        /* белый текст */
-  text-decoration:none !important;
-}
-.btn-primary:hover{
-  background:var(--link-600);
-  border-color:var(--link-600);
-}
-.btn-primary:active{
-  background:var(--link-700);
-  border-color:var(--link-700);
-}
-
-/* Outline buttons */
-.btn, .btn-outline{
-  text-decoration:none !important;  /* убрали подчёркивание */
-}
-
-/* Inputs */
-.input, select, textarea{
-  width:100%;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--text);
-}
-.input:focus, select:focus, textarea:focus{outline:3px solid var(--ring);border-color:transparent}
-
-/* Links */
-a{color:var(--link)}
-a:visited{color:var(--link-visited)}
-a:hover{filter:brightness(1.05)}
-
-/* Notices */
-.notice{padding:12px 14px;border-radius:14px;margin-top:12px;border:1px solid var(--line)}
-.notice.ok{background:#e9f7ef;color:#245c47;border-color:#c6ead7}
-.notice.err{background:#fff4f4;color:#7b2b2b;border-color:#f1d0d0}
+.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
 .muted{color:var(--muted)}
 
-/* Calendar */
-.controls{display:flex;gap:8px;margin-bottom:10px;align-items:center}
-.iconbtn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 10px;cursor:pointer}
-.iconbtn:hover{background:#fafafa}
-#calendar{padding:10px}
-#calendar table{width:100%;border-collapse:separate;border-spacing:8px}
-#calendar th{color:var(--muted);font-weight:600;text-align:left}
-#calendar td{
-  height:70px;background:#fff;border:1px solid var(--line);border-radius:14px;position:relative;
-  transition:box-shadow .15s, background .15s, border-color .15s;
-}
-#calendar td:hover{box-shadow:0 2px 10px rgba(0,0,0,.06)}
-#calendar td.active{outline:2px solid #95b7aa;outline-offset:2px}
-#calendar td.other-month{opacity:.38}
-#calendar td.today{box-shadow:inset 0 0 0 2px #cfe3df}
+/* Кнопки */
+.btn{border:1px solid var(--line); background:#fff; padding:10px 16px; border-radius:14px; font-weight:600; cursor:pointer; text-decoration:none; color:var(--text)}
+.btn:hover{box-shadow:0 1px 0 rgba(0,0,0,.05)}
+.btn-outline{background:#fff}
+.btn-primary{background:var(--link); border-color:var(--link); color:#fff}
+.btn-small{padding:8px 12px; border-radius:12px; font-size:14px}
+.iconbtn{width:40px;height:40px;border:1px solid var(--line);background:#fff;border-radius:12px;cursor:pointer}
 
-#calendar td.has-slots::after{
-  content:"";position:absolute;left:10px;bottom:10px;width:8px;height:8px;border-radius:50%;background:#2f7e79;
+/* Грид 50/50 */
+.grid{display:grid;gap:24px}
+.grid-2{grid-template-columns:1fr 1fr}
+@media (max-width: 900px){
+  .grid-2{grid-template-columns:1fr}
 }
 
-/* Day slots */
-#day-slots{display:flex;flex-wrap:wrap;gap:10px;min-height:40px}
-.chip{border:1px solid var(--line);background:#f4f6f7;border-radius:999px;padding:8px 14px;cursor:pointer}
-.chip:hover{filter:brightness(1.04)}
-.chip.active{outline:2px solid #95b7aa}
-.chip.disabled{opacity:.45;pointer-events:none;filter:grayscale(1)}
-
-/* Footer */
-footer{color:var(--muted);margin:30px 0}
-
-/* Hero section (homepage) */
-.hero{
-  display:grid;grid-template-columns:1.4fr 1fr;gap:22px;align-items:center;
+/* Ближайшая запись — строка фиксированной высоты (без скачков) */
+.next-slot-row{
+  display:flex; align-items:center; gap:12px;
+  min-height:48px;              /* резерв высоты */
+  margin-bottom:6px;
 }
-.hero .lead{font-size:clamp(18px,2vw,20px);color:var(--muted)}
-.hero .cta{display:flex;gap:12px;flex-wrap:wrap}
-@media (max-width:960px){ .hero{grid-template-columns:1fr} }
+.next-slot__text strong{font-weight:700}
+
+/* Список слотов (чипсы) */
+.slot-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}
+.slot-chips button{
+  padding:8px 12px; border:1px solid var(--line); background:#fff; border-radius:12px; cursor:pointer;
+}
+.slot-chips button.is-active,.slot-chips button:focus{
+  border-color:var(--link); box-shadow:0 0 0 3px var(--ring);
+}
+
+/* Календарь */
+.controls{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.month-label{font-weight:700;margin-left:4px}
+.cal{width:100%;border-collapse:separate;border-spacing:14px 16px}
+.cal th{text-align:left;color:var(--muted);font-weight:700}
+.cal td{
+  width:1%; /* даём таблице самой подбирать ширину */
+}
+.day{
+  width:100%;
+  aspect-ratio: 6/7;                        /* ближе к квадрату */
+  min-height:68px;                           /* на больших экранах */
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  display:flex;align-items:flex-start;justify-content:flex-start;
+  padding:14px; gap:6px; position:relative; cursor:pointer;
+}
+.day[disabled]{opacity:.4;cursor:default}
+.day .num{font-weight:600}
+.day .dot{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:var(--link);opacity:.75}
+
+/* выделения */
+.day.is-today{outline:2px solid var(--link); outline-offset:-2px}
+.day.is-selected{box-shadow:0 0 0 4px var(--ring); border-color:var(--link)}
+
+/* Мобильные — ниже высота, «квадратнее» */
+@media (max-width:700px){
+  .cal{border-spacing:10px 12px}
+  .day{min-height:56px; padding:10px; border-radius:14px}
+}
+
+/* Формы */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:600px){.row2{grid-template-columns:1fr}}
+.input{
+  width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+  background:#fff; outline:none;
+}
+.input:focus{border-color:var(--link); box-shadow:0 0 0 3px var(--ring)}
+textarea.input{min-height:110px;resize:vertical}
+
+/* Подсказки и итоги */
+#booking-out{margin-top:10px}
