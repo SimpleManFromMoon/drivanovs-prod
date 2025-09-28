@@ -26,12 +26,14 @@
   function atStartOfDay(d){
     return new Date(d.getFullYear(), d.getMonth(), d.getDate());
   }
+
+  // было: function addDays(d, n){ return new Date(d.getTime()+n*ONE_DAY); }
   function addDays(d, n){
-    // без миллисекунд — через setDate, чтобы не ловить DST
     const out = new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
     out.setHours(0,0,0,0);
     return out;
   }
+
   function sameDate(a,b){
     const A = atStartOfDay(a), B = atStartOfDay(b);
     return A.getTime() === B.getTime();
@@ -41,34 +43,75 @@
     return d.toLocaleDateString(lang||'ru-RU',{month:'long', year:'numeric'});
   }
 
+  function renderCalendarSkeleton(container, showHeaders = true) {
+    // очищаем и рисуем скелетон с таким же гридом
+    container.innerHTML = '';
+    const skeleton = document.createElement('div');
+    skeleton.className = 'cal-skeleton';
+
+    if (showHeaders) {
+      for (let i = 0; i < 7; i++) {
+        const h = document.createElement('div');
+        h.className = 'cal-skel-header';
+        skeleton.appendChild(h);
+      }
+    }
+
+    // 6 недель * 7 дней = 42 ячейки
+    for (let i = 0; i < 42; i++) {
+      const c = document.createElement('div');
+      c.className = 'cal-skel-cell';
+      skeleton.appendChild(c);
+    }
+
+    container.appendChild(skeleton);
+  }
+
+  function setCalendarLoading(isLoading, gridEl) {
+    const live = document.getElementById('cal-live');
+    if (isLoading) {
+      renderCalendarSkeleton(gridEl, true);
+      if (live) live.textContent = 'загрузка календаря…';
+    } else {
+      if (live) live.textContent = 'календарь загружен';
+    }
+  }
+
   // загрузка данных месяц/месяц+1 для точек
   async function ensureMonthLoaded(d){
     if(!ENDPOINT){ console.warn('No ENDPOINT'); return; }
+
     const from = new Date(d.getFullYear(), d.getMonth(), 1);
     const to   = new Date(d.getFullYear(), d.getMonth()+1, 0);
     const key  = ymd(from)+'__'+ymd(to);
     if(state.daysMap.has(key)) return;
 
-    const url = `${ENDPOINT}?action=slots&from=${ymd(from)}&to=${ymd(to)}&callback=__onSlots_${Date.now()}`;
-    state.daysMap.set(key, 'loading');
+    setCalendarLoading(true, gridEl()); // ← Скелетон ON
 
-    const data = await jsonp(url);
-    // заполняем дни
-    (data.days||[]).forEach(day=>{
-      state.daysMap.set(day.date, day.slots||[]);
-    });
+    try{
+      const url = `${ENDPOINT}?action=slots&from=${ymd(from)}&to=${ymd(to)}&callback=__onSlots_${Date.now()}`;
+      state.daysMap.set(key, 'loading');
 
-    // nearest
-    if(!state.nearest){
-      const now = new Date();
-      let best = null;
+      const data = await jsonp(url);
+      // заполняем дни
       (data.days||[]).forEach(day=>{
-        day.slots.forEach(t=>{
-          const dt = new Date(day.date+'T'+t+':00');
-          if(dt>now && (!best || dt<best.dt)) best={date:day.date, time:t, dt};
-        });
+        state.daysMap.set(day.date, day.slots||[]);
       });
-      if(best){ state.nearest={date:best.date, time:best.time}; }
+
+      // nearest
+      if(!state.nearest){
+        const now = new Date();
+        let best = null;
+        (data.days||[]).forEach(day=>{
+          day.slots.forEach(t=>{
+            const dt = new Date(day.date+'T'+t+':00');
+            if(dt>now && (!best || dt<best.dt)) best={date:day.date, time:t, dt};
+          });
+        });
+        if(best){ state.nearest={date:best.date, time:best.time}; }
+      }
+    } finally {
+      setCalendarLoading(false, gridEl()); // ← Скелетон OFF
     }
   }
 
@@ -111,11 +154,6 @@
   function showMonth(d){
     state.monthDate = stripToFirst(d);
     titleEl().textContent = fmtDate(state.monthDate, I18N?I18N.lang:'ru-RU');
-
-    // ⬇ показываем заглушку на время загрузки
-    gridEl().innerHTML = `<div class="cal-loading">${
-      (window.I18N && typeof I18N.t==='function' && I18N.t('cal.loading')) || 'загрузка календаря…'
-    }</div>`;
 
     ensureMonthLoaded(state.monthDate).then(()=>{
       buildWeekHeader();
@@ -232,4 +270,48 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     slotsEl().innerHTML = '';
   }
   });
+
+  // Удаляем слот локально после успешного бронирования
+  function locallyRemoveSlot(dateStr, timeStr){
+    const arr = state.daysMap.get(dateStr);
+    if (!Array.isArray(arr)) return;
+
+    const idx = arr.indexOf(timeStr);
+    if (idx === -1) return;
+
+    // 1) обновляем кэш слотов
+    arr.splice(idx, 1);
+    state.daysMap.set(dateStr, arr);
+
+    // 2) если открыта эта же дата — обновляем правую колонку
+    if (state.selectedDate === dateStr){
+      // убрать кнопку слота
+      const b = slotsEl().querySelector(`.slot[data-t="${timeStr}"]`);
+      if (b) b.remove();
+
+      // если удалили выбранный — сбросить выбор
+      if (state.selectedTime === timeStr){
+        state.selectedTime = null;
+        timeInput().value = '';
+      }
+
+      // если слотов больше нет — очистить и показать сообщение
+      if (arr.length === 0){
+        slotsEl().innerHTML = '';
+        if (typeof setNoSlotsMsg === 'function') setNoSlotsMsg(true);
+      }
+    }
+
+    // 3) точка в календаре
+    const cell = gridEl().querySelector(`.cal-day[data-id="${dateStr}"]`);
+    if (cell){
+      const dot = cell.querySelector('.cal-dot');
+      if (arr.length === 0 && dot) dot.remove();
+      if (arr.length > 0 && !dot) cell.insertAdjacentHTML('beforeend','<span class="cal-dot"></span>');
+    }
+  }
+
+  // экспортируем в глобал, чтобы app.js мог вызвать
+  window.locallyRemoveSlot = locallyRemoveSlot;
+
 })();

@@ -37,6 +37,8 @@
         на данный момент нет свободных мест
       </div>
 
+      <div id="cal-live" class="visually-hidden" aria-live="polite"></div>
+
       <div style="margin-top:16px">
         <div class="small" data-i18n="booking.slotsTitle">Доступное время:</div>
         <div class="slots" id="timeSlots"></div>
@@ -90,8 +92,9 @@
         <div style="margin-top:16px">
           <button type="submit" class="btn blue" data-i18n="form.submit">Забронировать</button>
         </div>
+        <div id="booking-out" class="small" style="margin-top:12px"></div>
+        <input type="text" name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;opacity:0">
       </form>
-
     </div>
   </section>
 </div>
@@ -101,13 +104,12 @@
 <script src="assets/i18n.js"></script>
 <script src="assets/nav.js"></script>
 <script src="assets/calendar.js"></script>
+
+<!-- порядок скриптов ВАЖЕН -->
+<script src="assets/app.js"></script>
 <script>
-  // Простейшая отправка (оставил, как есть у тебя)
-  document.getElementById('bookingForm').addEventListener('submit', (e)=>{
-    e.preventDefault();
-    // здесь твоя логика отправки в Apps Script (не менял)
-    alert('Форма отправлена (демо)');
-  });
+  document.getElementById('bookingForm').addEventListener('submit', submitBooking);
 </script>
+
 </body>
 </html>

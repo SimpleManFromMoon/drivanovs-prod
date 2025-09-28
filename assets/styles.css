@@ -95,6 +95,48 @@ textarea{min-height:140px; resize:vertical}
   padding: 18px;
   text-align: center;
   color: var(--muted);
+ }
+ /* --- Calendar skeleton --- */
+.cal-skeleton {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+  grid-column: 1 / -1;   /* занять всю ширину сетки */
+  padding: 6px 0;
+}
+
+.cal-skel-cell,
+.cal-skel-header {
+  border-radius: 12px;
+  background: linear-gradient(90deg,
+    rgba(0,0,0,0.06) 25%,
+    rgba(0,0,0,0.10) 37%,
+    rgba(0,0,0,0.06) 63%);
+  animation: cal-shimmer 1.4s infinite linear;
+}
+
+.cal-skel-header {
+  height: 20px;
+  margin-bottom: 6px;
+}
+
+.cal-skel-cell {
+  aspect-ratio: 1 / 1;            /* квадрат как у дня */
+  border: 1px solid var(--border);
+}
+
+@keyframes cal-shimmer {
+  0%   { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+/* Прячем для глаз, оставляем для скринридеров */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
 }
 
 /* область слотов — фиксируем min-height, чтобы не «прыгала» верстка */
