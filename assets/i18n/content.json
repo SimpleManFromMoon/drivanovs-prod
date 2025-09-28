@@ -173,5 +173,7 @@
     "ru": "загрузка календаря…",
     "lv": "kalendārs ielādējas…",
     "en": "loading calendar…"
-  }
+  },
+  "form.checking": { "ru": "Проверяем…", "lv": "Pārbaudām…", "en": "Checking…" },
+  "form.booking":  { "ru": "Бронируем…",  "lv": "Rezervējam…", "en": "Booking…" }
 }

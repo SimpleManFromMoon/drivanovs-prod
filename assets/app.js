@@ -43,22 +43,38 @@ async function submitBooking(e){
     out.innerHTML = `<div class="notice err">${I18N.t('form.pick')}</div>`; return;
   }
 
+  btn.classList.add('loading');
+  btn.disabled = true;
+  btn.textContent = (window.I18N ? I18N.t('form.checking') : 'Проверяем…');
+
   // ⚡ живой чек перед отправкой
   const stillOk = await checkSlot(form.date.value, form.time.value);
   if (!stillOk){
     out.innerHTML = `<div class="notice err">Увы, слот уже занят. Обновляю список…</div>`;
     if (typeof loadDaySlots==='function') loadDaySlots(form.date.value);
     if (typeof loadMonth==='function') loadMonth(true);
+
+    // ⬇ вернуть кнопку в исходное состояние
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    btn.textContent = initial;
     return;
   }
 
   const v = validateForm(form);
-  if(!v.ok){ out.innerHTML = `<div class="notice err">${v.msg}</div>`; return; }
+  if(!v.ok){
+    out.innerHTML = `<div class="notice err">${v.msg}</div>`;
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    btn.textContent = initial;
+    return;
+  }
 
   const bookedDate = form.date.value;
   const bookedTime = form.time.value;
 
-  btn.disabled = true; btn.textContent = 'Бронируем…';
+  // ⬇ меняем текст на следующий этап
+  btn.textContent = (window.I18N ? I18N.t('form.booking') : 'Бронируем…');
   out.textContent='';
 
   const payload = {
@@ -79,12 +95,10 @@ async function submitBooking(e){
       body: JSON.stringify(payload)
     });
 
-    // локально скрыть слот и обновить
     if(typeof locallyRemoveSlot==='function') locallyRemoveSlot(bookedDate, bookedTime);
     out.innerHTML = `<div class="notice ok">${I18N.t('form.ok')}</div>`;
     form.reset?.(); if(window.state) state.selected=null;
     const chosen=document.getElementById('chosen'); if(chosen) chosen.textContent='';
-
     if(window.SLOTS_CACHE && typeof monthKeyOf==='function'){
       delete SLOTS_CACHE[monthKeyOf(new Date(bookedDate))];
     }
@@ -94,6 +108,8 @@ async function submitBooking(e){
   }catch(err){
     out.innerHTML = `<div class="notice err">${I18N.t('form.err')}</div>`;
   }finally{
-    btn.disabled=false; btn.textContent=initial;
+    btn.classList.remove('loading');    // ⬅ убрать подсветку/спиннер
+    btn.disabled = false;
+    btn.textContent = initial;
   }
 }

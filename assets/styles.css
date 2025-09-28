@@ -125,6 +125,26 @@ textarea{min-height:140px; resize:vertical}
   border: 1px solid var(--border);
 }
 
+/* --- state: button is busy --- */
+.btn.loading{
+  opacity:.92;
+  pointer-events:none;
+  position:relative;
+}
+.btn.blue.loading{ filter:brightness(.92); }
+
+/* мини-спиннер справа от текста */
+.btn.loading::after{
+  content:"";
+  width:14px; height:14px;
+  margin-left:8px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.55);
+  border-top-color:#fff;
+  animation: btnspin .8s linear infinite;
+}
+@keyframes btnspin { to { transform: rotate(360deg); } }
+
 @keyframes cal-shimmer {
   0%   { background-position: -200px 0; }
   100% { background-position: calc(200px + 100%) 0; }
