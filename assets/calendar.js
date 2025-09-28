@@ -1,228 +1,202 @@
-// Универсальный календарь для booking.html
-(function () {
-  // Подстраховка: запускаем только на странице, где есть сетка календаря
-  document.addEventListener('DOMContentLoaded', () => {
-    const grid = document.querySelector('#cal-grid');
-    if (!grid) return; // не booking.html
+// assets/calendar.js
+(function(){
+  const ENDPOINT = (window.APP_CONFIG||{}).ENDPOINT;
+  const SLOT_MINUTES = 25; // у тебя фиксировано
+  const ONE_DAY = 86400000;
 
-    const cfg = window.APP_CONFIG || {};
-    if (!cfg.ENDPOINT) {
-      console.warn('APP_CONFIG.ENDPOINT not provided');
-      return;
-    }
+  // элементы
+  const titleEl   = () => document.getElementById('calTitle');
+  const gridEl    = () => document.getElementById('calGrid');
+  const weekEl    = () => document.getElementById('calWeek');
+  const slotsEl   = () => document.getElementById('timeSlots');
+  const dateInput = () => document.querySelector('input[name="date"]');
+  const timeInput = () => document.querySelector('input[name="time"]');
 
-    // ====== helpers ======
-    const pad = n => String(n).padStart(2, '0');
-    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const ym  = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-    const fromMonthStart = d => new Date(d.getFullYear(), d.getMonth(), 1);
-    const toMonthEnd     = d => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const state = {
+    monthDate: stripToFirst(new Date()), // текущий показанный месяц (1-е число)
+    daysMap: new Map(), // 'YYYY-MM-DD' -> ['15:00','15:30',...]
+    nearest: null,      // {date:'YYYY-MM-DD', time:'HH:mm'}
+    selectedDate: null, // 'YYYY-MM-DD'
+    selectedTime: null
+  };
 
-    // jsonp
-    function jsonp(url) {
-      return new Promise((resolve, reject) => {
-        const cb = '__onSlots_' + Date.now();
-        const scr = document.createElement('script');
-        const timer = setTimeout(() => {
-          cleanup();
-          reject(new Error('JSONP timeout'));
-        }, 15000);
+  function stripToFirst(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function ymd(d){ return d.toISOString().slice(0,10); }
+  function addDays(d, n){ return new Date(d.getTime()+n*ONE_DAY); }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function fmtDate(d, lang){
+    return d.toLocaleDateString(lang||'ru-RU',{month:'long', year:'numeric'});
+  }
 
-        window[cb] = data => {
-          cleanup();
-          resolve(data);
-        };
+  // загрузка данных месяц/месяц+1 для точек
+  async function ensureMonthLoaded(d){
+    if(!ENDPOINT){ console.warn('No ENDPOINT'); return; }
+    const from = new Date(d.getFullYear(), d.getMonth(), 1);
+    const to   = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const key  = ymd(from)+'__'+ymd(to);
+    if(state.daysMap.has(key)) return;
 
-        function cleanup() {
-          clearTimeout(timer);
-          delete window[cb];
-          scr.remove();
-        }
+    const url = `${ENDPOINT}?action=slots&from=${ymd(from)}&to=${ymd(to)}&callback=__onSlots_${Date.now()}`;
+    state.daysMap.set(key, 'loading');
 
-        scr.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
-        scr.onerror = () => { cleanup(); reject(new Error('JSONP error')); };
-        document.head.appendChild(scr);
-      });
-    }
-
-    // ====== state ======
-    const state = {
-      month: fromMonthStart(new Date()),
-      cache: new Map(),             // 'YYYY-MM' -> [{date:'YYYY-MM-DD', slots:['15:00',...]}]
-      selectedDate: null
-    };
-
-    // ====== elements ======
-    const elMonth = document.querySelector('#cal-month');
-    const elPrev  = document.querySelector('#cal-prev');
-    const elNext  = document.querySelector('#cal-next');
-    const elTimes = document.querySelector('#slot-times');
-
-    const elNextDate = document.querySelector('#next-slot-date');
-    const elNextTime = document.querySelector('#next-slot-time');
-    const elNextBtn  = document.querySelector('#next-slot-btn');
-
-    const formDate = document.querySelector('#form-date');
-    const formTime = document.querySelector('#form-time');
-
-    // ====== month navigation ======
-    elPrev.addEventListener('click', () => {
-      state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
-      render();
-    });
-    elNext.addEventListener('click', () => {
-      state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
-      render();
+    const data = await jsonp(url);
+    // заполняем дни
+    (data.days||[]).forEach(day=>{
+      state.daysMap.set(day.date, day.slots||[]);
     });
 
-    // ====== data loading ======
-    async function ensureMonthLoaded(d) {
-      const key = ym(d);
-      if (state.cache.has(key)) return;
-
-      const from = `${key}-01`;
-      const end  = toMonthEnd(d);
-      const to   = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
-
-      const url = `${cfg.ENDPOINT}?action=slots&from=${from}&to=${to}`;
-      const payload = await jsonp(url);
-      // payload = {days:[{date:'YYYY-MM-DD', slots:['15:00',...]}]}
-      state.cache.set(key, (payload && payload.days) ? payload.days : []);
-    }
-
-    function getSlotsMapForMonth(d) {
-      const list = state.cache.get(ym(d)) || [];
-      const map = new Map();
-      for (const day of list) map.set(day.date, day.slots || []);
-      return map;
-    }
-
-    // ====== render ======
-    async function render() {
-      await ensureMonthLoaded(state.month);
-
-      const monthName = state.month.toLocaleString(I18N?.lang || 'ru', {month:'long', year:'numeric'});
-      elMonth.textContent = monthName;
-
-      grid.innerHTML = '';
-      elTimes.innerHTML = '';
-
-      const first = fromMonthStart(state.month);
-      const last  = toMonthEnd(state.month);
-      const startWeekDay = (first.getDay() + 6) % 7; // Пн=0
-
-      const map = getSlotsMapForMonth(state.month);
-      const todayStr = ymd(new Date());
-
-      // пустые клетки до 1-го числа
-      for (let i=0; i<startWeekDay; i++){
-        const stub = document.createElement('div');
-        stub.className = 'day is-disabled';
-        stub.setAttribute('aria-hidden','true');
-        grid.appendChild(stub);
-      }
-
-      for (let d=1; d<=last.getDate(); d++){
-        const date = new Date(state.month.getFullYear(), state.month.getMonth(), d);
-        const cell = document.createElement('button');
-        cell.type = 'button';
-        cell.className = 'day';
-        cell.textContent = d;
-
-        const dateStr = ymd(date);
-        if (dateStr === todayStr) cell.classList.add('is-today');
-
-        const slots = map.get(dateStr);
-        if (slots && slots.length){
-          const dot = document.createElement('span');
-          dot.className = 'dot';
-          cell.appendChild(dot);
-          cell.addEventListener('click', () => selectDate(dateStr, slots, cell));
-        } else {
-          cell.classList.add('is-disabled');
-        }
-
-        if (state.selectedDate === dateStr) cell.classList.add('is-selected');
-
-        grid.appendChild(cell);
-      }
-    }
-
-    function selectDate(dateStr, slots, cellEl){
-      state.selectedDate = dateStr;
-
-      // подсветка клетки
-      document.querySelectorAll('.day').forEach(el => el.classList.remove('is-selected'));
-      cellEl?.classList.add('is-selected');
-
-      // заполняем время
-      elTimes.innerHTML = '';
-      slots.forEach(t => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'time';
-        b.textContent = t;
-        b.addEventListener('click', () => {
-          formDate.value = dateStr;
-          formTime.value = t;
+    // nearest
+    if(!state.nearest){
+      const now = new Date();
+      let best = null;
+      (data.days||[]).forEach(day=>{
+        day.slots.forEach(t=>{
+          const dt = new Date(day.date+'T'+t+':00');
+          if(dt>now && (!best || dt<best.dt)) best={date:day.date, time:t, dt};
         });
-        elTimes.appendChild(b);
       });
-
-      // и в форму дату
-      formDate.value = dateStr;
-      formTime.value = '';
+      if(best){ state.nearest={date:best.date, time:best.time}; }
     }
+  }
 
-    // ====== nearest slot ======
-    async function updateNearest() {
-      // ищем максимум в пределах горизонта 6 месяцев
-      const probe = new Date();
-      for (let i=0; i<6; i++){
-        const dt = new Date(probe.getFullYear(), probe.getMonth() + i, 1);
-        await ensureMonthLoaded(dt);
-        const list = state.cache.get(ym(dt)) || [];
-        for (const d of list){
-          if (d.slots && d.slots.length){
-            const when = new Date(d.date + 'T' + d.slots[0] + ':00');
-            elNextDate.textContent = when.toLocaleDateString(I18N?.lang || 'ru', {day:'2-digit', month:'long'});
-            elNextTime.textContent = d.slots[0];
+  function buildWeekHeader(){
+    const days = ['cal.mon','cal.tue','cal.wed','cal.thu','cal.fri','cal.sat','cal.sun'];
+    weekEl().innerHTML = days.map(k=>`<div class="small" data-i18n="${k}">${window.I18N?I18N.t(k):k}</div>`).join('');
+    if(window.I18N) I18N.apply();
+  }
 
-            elNextBtn.onclick = () => {
-              state.month = fromMonthStart(new Date(d.date));
-              render().then(()=> {
-                // кликнуть на саму дату
-                const idx = Number(d.date.slice(-2));
-                const cells = [...document.querySelectorAll('.day')].filter(x => !x.classList.contains('is-disabled'));
-                // более надёжно: вручную выделим по exact date
-                const all = document.querySelectorAll('.day');
-                for (const c of all){
-                  if (c.textContent === String(idx) && !c.classList.contains('is-disabled')){
-                    selectDate(d.date, d.slots, c);
-                    c.scrollIntoView({block:'center', behavior:'smooth'});
-                    break;
-                  }
-                }
-              });
-            };
-            return;
-          }
+  function buildGrid(){
+    const root = gridEl(); root.innerHTML='';
+    const m0 = state.monthDate;
+    const firstDay = new Date(m0);
+    const shift = (firstDay.getDay()+6)%7; // понедельник = 0
+    const start = addDays(m0, -shift);
+
+    for(let i=0;i<42;i++){
+      const d = addDays(start,i);
+      const id = ymd(d);
+      const inMonth = d.getMonth()===m0.getMonth();
+      const has = state.daysMap.get(id); // массив слотов
+      const hasSlots = Array.isArray(has) && has.length>0;
+
+      const btn = document.createElement('button');
+      btn.className = 'cal-day'+(inMonth?'':' muted');
+      btn.innerHTML = `${d.getDate()}${hasSlots?'<span class="cal-dot"></span>':''}`;
+      if(sameDate(d,new Date())) btn.classList.add('today');
+
+      btn.addEventListener('click', ()=>selectDate(id));
+      if(state.selectedDate===id) btn.classList.add('selected');
+      root.appendChild(btn);
+    }
+  }
+  function sameDate(a,b){return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();}
+
+  function showMonth(d){
+    state.monthDate = stripToFirst(d);
+    titleEl().textContent = fmtDate(state.monthDate, I18N?I18N.lang:'ru-RU');
+    ensureMonthLoaded(state.monthDate).then(()=>{
+      buildWeekHeader();
+      buildGrid();
+    });
+  }
+
+  function selectDate(id){
+    state.selectedDate=id;
+    dateInput().value = id;
+    state.selectedTime=null;
+    timeInput().value='';
+    // render slots
+    const arr = state.daysMap.get(id)||[];
+    slotsEl().innerHTML = arr.map(t=>`<button class="slot" data-t="${t}">${t}</button>`).join('');
+  }
+
+  function attachSlotsClick(){
+    slotsEl().addEventListener('click', (e)=>{
+      const b = e.target.closest('.slot'); if(!b) return;
+      state.selectedTime = b.dataset.t;
+      timeInput().value = state.selectedTime;
+      slotsEl().querySelectorAll('.slot').forEach(x=>x.classList.toggle('selected', x===b));
+    });
+  }
+
+  // JSONP helper
+  function jsonp(url){
+    return new Promise((resolve,reject)=>{
+      const cb = url.match(/callback=([^&]+)/)[1];
+      window[cb] = (data)=>{ resolve(data); cleanup(); };
+      const s = document.createElement('script');
+      s.src = url; s.onerror = ()=>{ reject(new Error('JSONP error')); cleanup(); };
+      document.body.appendChild(s);
+      function cleanup(){ delete window[cb]; s.remove(); }
+      setTimeout(()=>reject(new Error('timeout')), 15000);
+    });
+  }
+
+  function goPrev(){ showMonth(new Date(state.monthDate.getFullYear(), state.monthDate.getMonth()-1, 1)); }
+  function goNext(){ showMonth(new Date(state.monthDate.getFullYear(), state.monthDate.getMonth()+1, 1)); }
+  function goToday(){ showMonth(new Date()); }
+
+  function wireUI(){
+    document.getElementById('btnPrev').addEventListener('click', goPrev);
+    document.getElementById('btnNext').addEventListener('click', goNext);
+    document.getElementById('btnToday').addEventListener('click', goToday);
+    attachSlotsClick();
+  }
+
+  // helper: пройти вперёд по месяцам и найти nearest
+async function findNearestWithin(monthStart, maxMonths=6){
+  let cursor = new Date(monthStart);
+  for(let i=0;i<maxMonths;i++){
+    await ensureMonthLoaded(cursor);
+    // пробуем найти ближайший в уже загруженных днях этого месяца
+    const from = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const to   = new Date(cursor.getFullYear(), cursor.getMonth()+1, 0);
+    const now  = new Date();
+    let best = null;
+    for(let d=new Date(from); d<=to; d.setDate(d.getDate()+1)){
+      const id = ymd(d);
+      const slots = state.daysMap.get(id);
+      if(Array.isArray(slots)){
+        for(const t of slots){
+          const dt = new Date(id+'T'+t+':00');
+          if(dt>now && (!best || dt<best.dt)) best = {date:id, time:t, dt};
         }
       }
-      // если нет свободных слотов
-      elNextDate.textContent = '';
-      elNextTime.textContent = '';
-      elNextBtn.disabled = true;
     }
+    if(best) return {date:best.date, time:best.time};
+    // иначе следующий месяц
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
+  }
+  return null;
+}
 
-    // стартовая отрисовка
-    render().then(updateNearest);
+// показать/скрыть сообщение "нет мест"
+function setNoSlotsMsg(show){
+  const el = document.getElementById('noSlotsMsg');
+  if(!el) return;
+  el.style.display = show ? 'block' : 'none';
+}
 
-    // ====== отправка формы (минимальная заглушка) ======
-    document.querySelector('#book-form')?.addEventListener('submit', (e)=>{
-      e.preventDefault();
-      // Здесь остаётся ваша логика отправки в Apps Script (у вас уже реализовано)
-      alert('Заявка отправлена: ' + (formDate.value || '—') + ' ' + (formTime.value || '—'));
-    });
+// старт
+document.addEventListener('DOMContentLoaded', async ()=>{
+  wireUI();
+
+  // ищем ближайший в горизонте до 6 мес
+  const nearest = await findNearestWithin(state.monthDate, 6);
+
+  if(nearest){
+    state.nearest = nearest;
+    const d = new Date(nearest.date+'T00:00:00');
+    showMonth(d);
+    selectDate(nearest.date);
+    setNoSlotsMsg(false);
+  }else{
+    // ничего не нашли — показываем текущий месяц и сообщение
+    await ensureMonthLoaded(state.monthDate);
+    showMonth(state.monthDate);
+    setNoSlotsMsg(true);
+    // очищаем слоты визуально
+    slotsEl().innerHTML = '';
+  }
   });
 })();

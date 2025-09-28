@@ -1,4 +1,3 @@
-
 // assets/config.js
 (function(){
   const params = new URLSearchParams(location.search);

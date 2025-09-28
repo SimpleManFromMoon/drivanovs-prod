@@ -158,5 +158,10 @@
     "next_slot_prefix": "Available",
     "next_slot_cta": "Go",
     "next_slot_none": "No free slots soon"
+  },
+  "cal.mon": {
+    "ru": "Пн",
+    "lv": "P",
+    "en": "Mon"
   }
 }
