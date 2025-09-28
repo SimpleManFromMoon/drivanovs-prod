@@ -21,8 +21,21 @@
   };
 
   function stripToFirst(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-  function ymd(d){ return d.toISOString().slice(0,10); }
-  function addDays(d, n){ return new Date(d.getTime()+n*ONE_DAY); }
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+  function atStartOfDay(d){
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  function addDays(d, n){
+    // без миллисекунд — через setDate, чтобы не ловить DST
+    const out = new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    out.setHours(0,0,0,0);
+    return out;
+  }
+  function sameDate(a,b){
+    const A = atStartOfDay(a), B = atStartOfDay(b);
+    return A.getTime() === B.getTime();
+  }
   function pad(n){ return String(n).padStart(2,'0'); }
   function fmtDate(d, lang){
     return d.toLocaleDateString(lang||'ru-RU',{month:'long', year:'numeric'});
@@ -68,7 +81,7 @@
   function buildGrid(){
     const root = gridEl(); root.innerHTML='';
     const m0 = state.monthDate;
-    const firstDay = new Date(m0);
+    const firstDay = atStartOfDay(m0);
     const shift = (firstDay.getDay()+6)%7; // понедельник = 0
     const start = addDays(m0, -shift);
 
@@ -76,24 +89,34 @@
       const d = addDays(start,i);
       const id = ymd(d);
       const inMonth = d.getMonth()===m0.getMonth();
-      const has = state.daysMap.get(id); // массив слотов
+      const has = state.daysMap.get(id);
       const hasSlots = Array.isArray(has) && has.length>0;
 
       const btn = document.createElement('button');
       btn.className = 'cal-day'+(inMonth?'':' muted');
+      btn.dataset.id = id;                                // ⬅ для быстрого выбора
       btn.innerHTML = `${d.getDate()}${hasSlots?'<span class="cal-dot"></span>':''}`;
-      if(sameDate(d,new Date())) btn.classList.add('today');
+
+      // «сегодня» только если это не выбранная дата
+      if(sameDate(d,new Date()) && state.selectedDate!==id) btn.classList.add('today');
 
       btn.addEventListener('click', ()=>selectDate(id));
       if(state.selectedDate===id) btn.classList.add('selected');
       root.appendChild(btn);
     }
   }
+
   function sameDate(a,b){return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();}
 
   function showMonth(d){
     state.monthDate = stripToFirst(d);
     titleEl().textContent = fmtDate(state.monthDate, I18N?I18N.lang:'ru-RU');
+
+    // ⬇ показываем заглушку на время загрузки
+    gridEl().innerHTML = `<div class="cal-loading">${
+      (window.I18N && typeof I18N.t==='function' && I18N.t('cal.loading')) || 'загрузка календаря…'
+    }</div>`;
+
     ensureMonthLoaded(state.monthDate).then(()=>{
       buildWeekHeader();
       buildGrid();
@@ -105,7 +128,17 @@
     dateInput().value = id;
     state.selectedTime=null;
     timeInput().value='';
-    // render slots
+
+    // сбрасываем предыдущее .selected и «сегодня»
+    gridEl().querySelectorAll('.cal-day.selected').forEach(el=>el.classList.remove('selected'));
+    // у «сегодня» уберём рамку, если она на старом элементе
+    gridEl().querySelectorAll('.cal-day.today').forEach(el=>el.classList.remove('today'));
+
+    // выделяем текущую кнопку
+    const btn = gridEl().querySelector(`.cal-day[data-id="${id}"]`);
+    if(btn) btn.classList.add('selected');
+
+    // рендер слотов
     const arr = state.daysMap.get(id)||[];
     slotsEl().innerHTML = arr.map(t=>`<button class="slot" data-t="${t}">${t}</button>`).join('');
   }

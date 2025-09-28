@@ -163,5 +163,15 @@
     "ru": "Пн",
     "lv": "P",
     "en": "Mon"
+  },
+  "nav.lang": {
+    "ru": "RU",
+    "lv": "LV",
+    "en": "EN"
+  },
+    "cal.loading": {
+    "ru": "загрузка календаря…",
+    "lv": "kalendārs ielādējas…",
+    "en": "loading calendar…"
   }
 }

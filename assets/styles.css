@@ -90,6 +90,12 @@ textarea{min-height:140px; resize:vertical}
 /* кнопки месяцев — светлые */
 .month-btn{min-width:40px; height:40px}
 .month-today{padding:8px 12px}
+.cal-loading{
+  grid-column: 1 / -1;
+  padding: 18px;
+  text-align: center;
+  color: var(--muted);
+}
 
 /* область слотов — фиксируем min-height, чтобы не «прыгала» верстка */
 .slots{display:flex; gap:10px; flex-wrap:wrap; min-height:44px; align-items:flex-start}
