@@ -2,130 +2,125 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Запись</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title data-i18n="title.booking">Запись</title>
 
-  <!-- Стили -->
   <link rel="stylesheet" href="assets/styles.css" />
+  <script defer src="assets/config.js"></script>
+  <script defer src="assets/i18n.js"></script>
+  <script defer src="assets/calendar.js"></script>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <nav>
-        <a href="index.html" data-i18n="nav.home">Главная</a>
-        <a href="about.html" data-i18n="nav.about">Обо мне</a>
-        <a href="rules.html" data-i18n="nav.rules">Правила</a>
-        <a href="booking.html" class="is-active" data-i18n="nav.booking">Запись</a>
-      </nav>
+  <header class="site-header">
+    <nav class="nav">
+      <a href="index.html" data-i18n="nav.home">Главная</a>
+      <a href="about.html" data-i18n="nav.about">Обо мне</a>
+      <a href="rules.html" data-i18n="nav.rules">Правила</a>
+      <a href="booking.html" class="is-active" data-i18n="nav.booking">Запись</a>
 
-      <div class="lang-switch" style="margin-left:auto">
-        <button type="button" data-switch-lang="ru">RU</button>
-        <button type="button" data-switch-lang="lv">LV</button>
-        <button type="button" data-switch-lang="en">EN</button>
+      <div class="lang-switch">
+        <button data-switch-lang="ru">RU</button>
+        <button data-switch-lang="lv">LV</button>
+        <button data-switch-lang="en">EN</button>
       </div>
-    </header>
+    </nav>
+  </header>
 
-    <section class="card">
-      <h1 data-i18n="site.title">Запись на приём</h1>
-      <p class="muted" data-i18n="booking.hint">
-        1) Выберите дату и время. 2) Заполните контактные данные. 3) Нажмите «Забронировать».
-      </p>
+  <main class="container">
+    <h1 data-i18n="booking.title">Запись на приём</h1>
+    <p class="muted" data-i18n="booking.steps">
+      1) Выберите дату и время. 2) Заполните контактные данные. 3) Нажмите «Забронировать».
+    </p>
 
-      <!-- Блок «Ближайшая запись» — фиксированной высоты, ничего не скачет -->
-      <div class="next-slot-row">
-        <div class="next-slot__text">
-          <span data-i18n="next.title">Ближайшая запись:</span>
-          <strong id="next-slot-date"></strong>
-          <span>, </span>
+    <div class="two-col">
+      <!-- ЛЕВАЯ КОЛОНКА: календарь + слоты + ближайшая -->
+      <section class="card card--calendar" id="calendar-card">
+        <!-- Ближайшая запись — статичное место, не дёргает верстку -->
+        <div class="next-slot-row">
+          <span class="muted" data-i18n="nextslot.title">Ближайшая запись:</span>
+          <strong id="next-slot-date"></strong><span class="comma" aria-hidden="true">,</span>
           <strong id="next-slot-time"></strong>
-        </div>
-        <button id="next-slot-jump" class="btn btn-small" disabled data-i18n="next.cta">Перейти</button>
-      </div>
-
-      <!-- Управление месяцем -->
-      <div class="controls">
-        <button class="iconbtn" id="prev" aria-label="Назад">←</button>
-        <button class="iconbtn" id="next" aria-label="Вперёд">→</button>
-        <span class="month-label" id="month-label">—</span>
-      </div>
-
-      <!-- 50/50: слева — слоты и календарь; справа — форма -->
-      <div class="grid grid-2">
-        <div>
-
-          <!-- Слоты выбранного дня (чипсы) -->
-          <div class="slot-chips" id="day-slots"></div>
-
-          <!-- Календарь -->
-          <table id="calendar" class="cal" aria-label="Календарь свободных слотов">
-            <thead>
-              <tr>
-                <th data-i18n="cal.mon">Пн</th>
-                <th data-i18n="cal.tue">Вт</th>
-                <th data-i18n="cal.wed">Ср</th>
-                <th data-i18n="cal.thu">Чт</th>
-                <th data-i18n="cal.fri">Пт</th>
-                <th data-i18n="cal.sat">Сб</th>
-                <th data-i18n="cal.sun">Вс</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-
-          <p class="muted" style="margin-top:8px" data-i18n="booking.legend">
-            • Точка под датой — есть свободное время. Нажмите дату, затем выберите время.
-            После бронирования запись появится в вашем календаре.
-          </p>
+          <button id="next-slot-btn" class="btn btn-primary btn-sm" data-i18n="nextslot.cta">Перейти</button>
         </div>
 
-        <!-- Форма бронирования -->
-        <aside>
-          <div class="muted" style="margin-bottom:6px">
-            <span data-i18n="chosen">Вы выбрали:</span> <span id="chosen"></span>
+        <div class="calendar-head">
+          <div class="month-switch">
+            <button id="cal-prev" class="btn-circle" aria-label="Prev">←</button>
+            <button id="cal-next" class="btn-circle" aria-label="Next">→</button>
+          </div>
+          <h2 id="cal-month" class="month-title">—</h2>
+        </div>
+
+        <!-- Слоты выбранного дня (над календарём) -->
+        <div id="slot-times" class="slot-times" aria-live="polite"></div>
+
+        <div class="weekdays">
+          <span data-i18n="cal.mon">Пн</span>
+          <span data-i18n="cal.tue">Вт</span>
+          <span data-i18n="cal.wed">Ср</span>
+          <span data-i18n="cal.thu">Чт</span>
+          <span data-i18n="cal.fri">Пт</span>
+          <span data-i18n="cal.sat">Сб</span>
+          <span data-i18n="cal.sun">Вс</span>
+        </div>
+
+        <div id="cal-grid" class="cal-grid"></div>
+
+        <p class="muted mt-16" data-i18n="booking.legend">
+          • Точка под датой — есть свободное время. Нажмите дату, затем выберите время. После бронирования запись появится в вашем календаре.
+        </p>
+      </section>
+
+      <!-- ПРАВАЯ КОЛОНКА: форма -->
+      <section class="card card--form">
+        <form id="book-form" novalidate>
+          <div class="row2">
+            <label>
+              <span data-i18n="form.name">Имя и фамилия</span>
+              <input id="form-name" class="input" type="text" required />
+            </label>
+            <label>
+              <span>E-mail</span>
+              <input id="form-email" class="input" type="email" required />
+            </label>
           </div>
 
-          <form id="booking-form" onsubmit="submitBooking(event)">
-            <div class="row2">
-              <input class="input" type="text" name="name" autocomplete="name" required
-                     placeholder="Имя и фамилия" data-i18n-placeholder="form.name" />
-              <input class="input" type="email" name="email" autocomplete="email" required
-                     placeholder="E-mail" data-i18n-placeholder="form.email" />
-            </div>
-
-            <div class="row2">
-              <input class="input" type="tel" name="phone" required
-                     placeholder="+371 …" data-i18n-placeholder="form.phone" />
-              <select class="input" name="mode">
-                <option value="in_person" selected data-i18n="form.mode.in_person">Очный визит</option>
+          <div class="row2">
+            <label>
+              <span data-i18n="form.phone">Телефон</span>
+              <input id="form-phone" class="input" type="tel" placeholder="+371 …" required />
+            </label>
+            <label>
+              <span data-i18n="form.mode">Формат визита</span>
+              <select id="form-mode" class="input">
+                <option value="in_person" data-i18n="form.mode.in_person">Очный визит</option>
                 <option value="online" data-i18n="form.mode.online">Онлайн</option>
               </select>
-            </div>
+            </label>
+          </div>
 
-            <div class="row2">
-              <input class="input" type="text" name="date" placeholder="Дата" readonly
-                     data-i18n-placeholder="form.date" />
-              <input class="input" type="text" name="time" placeholder="Время" readonly
-                     data-i18n-placeholder="form.time" />
-            </div>
+          <div class="row2">
+            <label>
+              <span data-i18n="form.date">Дата</span>
+              <input id="form-date" class="input" type="text" readonly />
+            </label>
+            <label>
+              <span data-i18n="form.time">Время</span>
+              <input id="form-time" class="input" type="text" readonly />
+            </label>
+          </div>
 
-            <textarea class="input" name="notes" maxlength="600"
-                      placeholder="Коротко о запросе (до 600 символов)"
-                      data-i18n-placeholder="form.notes"></textarea>
+          <label>
+            <span data-i18n="form.notes">Комментарий</span>
+            <textarea id="form-notes" class="input" rows="5" placeholder="Коротко о запросе (до 600 символов)"></textarea>
+          </label>
 
-            <button class="btn btn-primary" style="margin-top:10px" id="book-btn">
-              <span data-i18n="form.submit">Забронировать</span>
-            </button>
-
-            <div id="booking-out" class="muted"></div>
-          </form>
-        </aside>
-      </div>
-    </section>
-  </div>
-
-  <!-- Скрипты (важно: порядок) -->
-  <script src="assets/config.js" defer></script>
-  <script src="assets/i18n.js" defer></script>
-  <script src="assets/calendar.js" defer></script>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary" data-i18n="form.submit">Забронировать</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
 </body>
 </html>

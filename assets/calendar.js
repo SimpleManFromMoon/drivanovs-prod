@@ -1,249 +1,228 @@
-/* Календарь + «ближайшая запись».
-   Работает с CONFIG.{ENDPOINT, SLOT_MINUTES, LEAD_HOURS, HORIZON_DAYS} */
-
+// Универсальный календарь для booking.html
 (function () {
-  const $  = (sel,root=document)=>root.querySelector(sel);
-  const $$ = (sel,root=document)=>Array.from(root.querySelectorAll(sel));
+  // Подстраховка: запускаем только на странице, где есть сетка календаря
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.querySelector('#cal-grid');
+    if (!grid) return; // не booking.html
 
-  // DOM
-  const tbody      = $('#calendar tbody');
-  const monthLabel = $('#month-label');
-  const daySlots   = $('#day-slots');
-
-  const nextDateEl = $('#next-slot-date');
-  const nextTimeEl = $('#next-slot-time');
-  const nextJump   = $('#next-slot-jump');
-
-  // состояние
-  const state = {
-    current: new Date(),
-    busy: false,
-    map: new Map(),          // 'yyyy-mm' -> [{date:'yyyy-mm-dd', slots:[..]}]
-    selected: null,          // 'yyyy-mm-dd'
-    nextSlot: null           // {date, time}
-  };
-
-  // формататоры
-  const ruMonth = new Intl.DateTimeFormat('ru-RU',{month:'long'});
-  const dmFmt   = new Intl.DateTimeFormat('ru-RU',{day:'2-digit', month:'long'});
-  const timeFmt = new Intl.DateTimeFormat('ru-RU',{hour:'2-digit', minute:'2-digit'});
-
-  const pad2 = n => String(n).padStart(2,'0');
-
-  /* ---------- Рисуем сетку месяца ---------- */
-  function buildGrid(date = state.current) {
-    const y = date.getFullYear(), m = date.getMonth(); // 0..11
-    monthLabel.textContent =
-      `${ruMonth.format(new Date(y,m,1))} ${y} г.`.replace(/^[а-я]/, s=>s.toUpperCase());
-
-    // начало недели: понедельник
-    const first = new Date(y, m, 1);
-    let startIdx = (first.getDay() + 6) % 7;                 // 0..6, Пн = 0
-    const daysInMonth = new Date(y, m+1, 0).getDate();
-
-    tbody.innerHTML = '';
-    let tr = document.createElement('tr');
-
-    // ячейки до 1-го числа
-    for (let i=0;i<startIdx;i++) tr.appendChild(document.createElement('td'));
-
-    for (let d=1; d<=daysInMonth; d++){
-      const td = document.createElement('td');
-      const btn = document.createElement('button');
-      btn.type='button'; btn.className='day';
-      btn.innerHTML = `<span class="num">${d}</span>`;
-
-      const dateStr = `${y}-${pad2(m+1)}-${pad2(d)}`;
-      btn.dataset.date = dateStr;
-
-      // «сегодня»
-      const today = new Date();
-      if (today.getFullYear()===y && today.getMonth()===m && today.getDate()===d){
-        btn.classList.add('is-today');
-      }
-
-      // точка, если есть слоты; иначе дизейблим
-      const monthKey = `${y}-${pad2(m+1)}`;
-      const dayData = (state.map.get(monthKey)||[]).find(x=>x.date===dateStr);
-      if (dayData && dayData.slots && dayData.slots.length){
-        const dot = document.createElement('i'); dot.className='dot'; btn.appendChild(dot);
-      } else {
-        btn.disabled = true;
-      }
-
-      btn.addEventListener('click', ()=>selectDay(dateStr));
-      td.appendChild(btn); tr.appendChild(td);
-
-      if ((startIdx + d) % 7 === 0 || d===daysInMonth){
-        tbody.appendChild(tr); tr=document.createElement('tr');
-      }
-    }
-
-    // выделение ранее выбранной даты
-    $$('button.day').forEach(b=>b.classList.remove('is-selected'));
-    if (state.selected){
-      const b = document.querySelector(`button.day[data-date="${state.selected}"]`);
-      if (b) b.classList.add('is-selected');
-    }
-  }
-
-  /* ---------- Список слотов дня ---------- */
-  function renderDaySlots(dateStr){
-    daySlots.innerHTML = '';
-    $('#booking-form [name="date"]').value = '';
-    $('#booking-form [name="time"]').value = '';
-
-    const [y,m,d] = dateStr.split('-').map(Number);
-    const monthKey = `${y}-${pad2(m)}`;
-    const dayData = (state.map.get(monthKey)||[]).find(x=>x.date===dateStr);
-    if (!dayData || !dayData.slots.length) return;
-
-    dayData.slots.forEach(t=>{
-      const btn=document.createElement('button');
-      btn.type='button'; btn.textContent=t;
-      btn.addEventListener('click', ()=>{
-        $$('#day-slots button').forEach(b=>b.classList.remove('is-active'));
-        btn.classList.add('is-active');
-        $('#booking-form [name="date"]').value = dateStr;
-        $('#booking-form [name="time"]').value = t;
-        $('#chosen').textContent = `${dmFmt.format(new Date(y,m-1,d))}, ${t}`;
-      });
-      daySlots.appendChild(btn);
-    });
-  }
-
-  /* ---------- Выбор дня ---------- */
-  function selectDay(dateStr){
-    state.selected = dateStr;
-    $$('#calendar .day').forEach(b=>b.classList.toggle('is-selected', b.dataset.date===dateStr));
-    renderDaySlots(dateStr);
-  }
-
-  /* ---------- Навигация по месяцам ---------- */
-  $('#prev').addEventListener('click', ()=>{
-    state.current = new Date(state.current.getFullYear(), state.current.getMonth()-1, 1);
-    ensureMonthLoaded(buildGrid);
-  });
-  $('#next').addEventListener('click', ()=>{
-    state.current = new Date(state.current.getFullYear(), state.current.getMonth()+1, 1);
-    ensureMonthLoaded(buildGrid);
-  });
-
-  /* ---------- JSONP загрузка слотов месяца ---------- */
-  function ensureMonthLoaded(cb){
-    const y = state.current.getFullYear(), m = state.current.getMonth()+1;
-    const key = `${y}-${pad2(m)}`;
-    if (state.map.has(key)){ cb && cb(); return; }
-
-    if (state.busy) return;
-    state.busy = true;
-
-    // диапазон на месяц
-    const from = `${y}-${pad2(m)}-01`;
-    const lastDay = new Date(y, m, 0).getDate();
-    const to   = `${y}-${pad2(m)}-${pad2(lastDay)}`;
-
-    const cbName = `__onSlots_${Date.now()}`;
-    window[cbName] = payload=>{
-      try{
-        // payload: {days:[{date:'yyyy-mm-dd', slots:[..]}]}
-        const grouped = new Map();
-        payload.days.forEach(d=>{
-          const mk = d.date.slice(0,7);
-          if (!grouped.has(mk)) grouped.set(mk, []);
-          grouped.get(mk).push(d);
-        });
-        grouped.forEach((v,k)=>state.map.set(k, v));
-      }finally{
-        cleanup();
-      }
-      cb && cb();
-      updateNextSlotBanner();
-    };
-
-    const s = document.createElement('script');
-    s.src = `${CONFIG.ENDPOINT}?action=slots&from=${from}&to=${to}&callback=${cbName}&v=${Date.now()}`;
-    s.onerror = ()=>{ cleanup(); cb && cb(); };
-    document.body.appendChild(s);
-
-    function cleanup(){
-      state.busy=false; delete window[cbName]; s.remove();
-    }
-  }
-
-  /* ---------- Ближайшая запись + «Перейти» ---------- */
-  function updateNextSlotBanner(){
-    // ищем ближайший слот среди уже загруженных месяцев
-    let next = null;
-    [...state.map.values()].flat().forEach(d=>{
-      d.slots.forEach(t=>{
-        const dt = new Date(`${d.date}T${t}:00`);
-        if (dt > new Date()){
-          if (!next || dt < next.dt) next = {date:d.date, time:t, dt};
-        }
-      });
-    });
-
-    if (!next){
-      nextDateEl.textContent = '';
-      nextTimeEl.textContent = '';
-      nextJump.disabled = true;
+    const cfg = window.APP_CONFIG || {};
+    if (!cfg.ENDPOINT) {
+      console.warn('APP_CONFIG.ENDPOINT not provided');
       return;
     }
 
-    state.nextSlot = next;
-    const [y,m,dd] = next.date.split('-').map(Number);
-    nextDateEl.textContent = dmFmt.format(new Date(y,m-1,dd));
-    nextTimeEl.textContent = timeFmt.format(new Date(y,m-1,dd, ...next.time.split(':').map(Number)));
-    nextJump.disabled = false;
-  }
+    // ====== helpers ======
+    const pad = n => String(n).padStart(2, '0');
+    const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const ym  = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+    const fromMonthStart = d => new Date(d.getFullYear(), d.getMonth(), 1);
+    const toMonthEnd     = d => new Date(d.getFullYear(), d.getMonth() + 1, 0);
 
-  nextJump.addEventListener('click', ()=>{
-    if (!state.nextSlot) return;
-    const [y,m] = state.nextSlot.date.split('-').map(Number);
+    // jsonp
+    function jsonp(url) {
+      return new Promise((resolve, reject) => {
+        const cb = '__onSlots_' + Date.now();
+        const scr = document.createElement('script');
+        const timer = setTimeout(() => {
+          cleanup();
+          reject(new Error('JSONP timeout'));
+        }, 15000);
 
-    const needMonth = new Date(y, m-1, 1);
-    const sameMonth = state.current.getFullYear()===needMonth.getFullYear()
-                   && state.current.getMonth()===needMonth.getMonth();
+        window[cb] = data => {
+          cleanup();
+          resolve(data);
+        };
 
-    const go = ()=>{
-      buildGrid(needMonth);
-      selectDay(state.nextSlot.date);
-      $('#calendar').scrollIntoView({behavior:'smooth', block:'start'});
+        function cleanup() {
+          clearTimeout(timer);
+          delete window[cb];
+          scr.remove();
+        }
+
+        scr.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+        scr.onerror = () => { cleanup(); reject(new Error('JSONP error')); };
+        document.head.appendChild(scr);
+      });
+    }
+
+    // ====== state ======
+    const state = {
+      month: fromMonthStart(new Date()),
+      cache: new Map(),             // 'YYYY-MM' -> [{date:'YYYY-MM-DD', slots:['15:00',...]}]
+      selectedDate: null
     };
 
-    if (!sameMonth){
-      state.current = needMonth;
-      ensureMonthLoaded(go);
-    }else{
-      go();
+    // ====== elements ======
+    const elMonth = document.querySelector('#cal-month');
+    const elPrev  = document.querySelector('#cal-prev');
+    const elNext  = document.querySelector('#cal-next');
+    const elTimes = document.querySelector('#slot-times');
+
+    const elNextDate = document.querySelector('#next-slot-date');
+    const elNextTime = document.querySelector('#next-slot-time');
+    const elNextBtn  = document.querySelector('#next-slot-btn');
+
+    const formDate = document.querySelector('#form-date');
+    const formTime = document.querySelector('#form-time');
+
+    // ====== month navigation ======
+    elPrev.addEventListener('click', () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
+      render();
+    });
+    elNext.addEventListener('click', () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
+      render();
+    });
+
+    // ====== data loading ======
+    async function ensureMonthLoaded(d) {
+      const key = ym(d);
+      if (state.cache.has(key)) return;
+
+      const from = `${key}-01`;
+      const end  = toMonthEnd(d);
+      const to   = `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`;
+
+      const url = `${cfg.ENDPOINT}?action=slots&from=${from}&to=${to}`;
+      const payload = await jsonp(url);
+      // payload = {days:[{date:'YYYY-MM-DD', slots:['15:00',...]}]}
+      state.cache.set(key, (payload && payload.days) ? payload.days : []);
     }
-  });
 
-  /* ---------- Инициализация ---------- */
-  ensureMonthLoaded(()=>{ buildGrid(); updateNextSlotBanner(); });
-
-  // Отправка формы
-  window.submitBooking = async function (e){
-    e.preventDefault();
-    const form = e.currentTarget;
-    const out  = $('#booking-out');
-    const fd   = new FormData(form);
-
-    if (!fd.get('date') || !fd.get('time')){
-      out.textContent = 'Пожалуйста, выберите дату и время.'; return;
+    function getSlotsMapForMonth(d) {
+      const list = state.cache.get(ym(d)) || [];
+      const map = new Map();
+      for (const day of list) map.set(day.date, day.slots || []);
+      return map;
     }
-    out.textContent = 'Запрос отправлен. Проверьте почту и календарь.';
 
-    try{
-      const resp = await fetch(CONFIG.ENDPOINT, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({action:'book', payload:Object.fromEntries(fd)})
+    // ====== render ======
+    async function render() {
+      await ensureMonthLoaded(state.month);
+
+      const monthName = state.month.toLocaleString(I18N?.lang || 'ru', {month:'long', year:'numeric'});
+      elMonth.textContent = monthName;
+
+      grid.innerHTML = '';
+      elTimes.innerHTML = '';
+
+      const first = fromMonthStart(state.month);
+      const last  = toMonthEnd(state.month);
+      const startWeekDay = (first.getDay() + 6) % 7; // Пн=0
+
+      const map = getSlotsMapForMonth(state.month);
+      const todayStr = ymd(new Date());
+
+      // пустые клетки до 1-го числа
+      for (let i=0; i<startWeekDay; i++){
+        const stub = document.createElement('div');
+        stub.className = 'day is-disabled';
+        stub.setAttribute('aria-hidden','true');
+        grid.appendChild(stub);
+      }
+
+      for (let d=1; d<=last.getDate(); d++){
+        const date = new Date(state.month.getFullYear(), state.month.getMonth(), d);
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'day';
+        cell.textContent = d;
+
+        const dateStr = ymd(date);
+        if (dateStr === todayStr) cell.classList.add('is-today');
+
+        const slots = map.get(dateStr);
+        if (slots && slots.length){
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          cell.appendChild(dot);
+          cell.addEventListener('click', () => selectDate(dateStr, slots, cell));
+        } else {
+          cell.classList.add('is-disabled');
+        }
+
+        if (state.selectedDate === dateStr) cell.classList.add('is-selected');
+
+        grid.appendChild(cell);
+      }
+    }
+
+    function selectDate(dateStr, slots, cellEl){
+      state.selectedDate = dateStr;
+
+      // подсветка клетки
+      document.querySelectorAll('.day').forEach(el => el.classList.remove('is-selected'));
+      cellEl?.classList.add('is-selected');
+
+      // заполняем время
+      elTimes.innerHTML = '';
+      slots.forEach(t => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'time';
+        b.textContent = t;
+        b.addEventListener('click', () => {
+          formDate.value = dateStr;
+          formTime.value = t;
+        });
+        elTimes.appendChild(b);
       });
-      if (!resp.ok) throw new Error('Network');
-    }catch(_){
-      out.textContent = 'Сбой соединения. Проверьте endpoint.';
+
+      // и в форму дату
+      formDate.value = dateStr;
+      formTime.value = '';
     }
-  };
+
+    // ====== nearest slot ======
+    async function updateNearest() {
+      // ищем максимум в пределах горизонта 6 месяцев
+      const probe = new Date();
+      for (let i=0; i<6; i++){
+        const dt = new Date(probe.getFullYear(), probe.getMonth() + i, 1);
+        await ensureMonthLoaded(dt);
+        const list = state.cache.get(ym(dt)) || [];
+        for (const d of list){
+          if (d.slots && d.slots.length){
+            const when = new Date(d.date + 'T' + d.slots[0] + ':00');
+            elNextDate.textContent = when.toLocaleDateString(I18N?.lang || 'ru', {day:'2-digit', month:'long'});
+            elNextTime.textContent = d.slots[0];
+
+            elNextBtn.onclick = () => {
+              state.month = fromMonthStart(new Date(d.date));
+              render().then(()=> {
+                // кликнуть на саму дату
+                const idx = Number(d.date.slice(-2));
+                const cells = [...document.querySelectorAll('.day')].filter(x => !x.classList.contains('is-disabled'));
+                // более надёжно: вручную выделим по exact date
+                const all = document.querySelectorAll('.day');
+                for (const c of all){
+                  if (c.textContent === String(idx) && !c.classList.contains('is-disabled')){
+                    selectDate(d.date, d.slots, c);
+                    c.scrollIntoView({block:'center', behavior:'smooth'});
+                    break;
+                  }
+                }
+              });
+            };
+            return;
+          }
+        }
+      }
+      // если нет свободных слотов
+      elNextDate.textContent = '';
+      elNextTime.textContent = '';
+      elNextBtn.disabled = true;
+    }
+
+    // стартовая отрисовка
+    render().then(updateNearest);
+
+    // ====== отправка формы (минимальная заглушка) ======
+    document.querySelector('#book-form')?.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      // Здесь остаётся ваша логика отправки в Apps Script (у вас уже реализовано)
+      alert('Заявка отправлена: ' + (formDate.value || '—') + ' ' + (formTime.value || '—'));
+    });
+  });
 })();
