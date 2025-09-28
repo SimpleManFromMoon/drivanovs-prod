@@ -5,7 +5,7 @@
   --text:#1f2a37;
   --muted:#6b7280;
   --line:#e5e7eb;
-  --link:#2563eb;           /* синий акцент */
+  --link:#2563eb;          /* синий акцент */
   --ring: rgba(37,99,235,.15);
   --radius:16px;
 }
@@ -27,9 +27,7 @@ h1{font-size:40px; line-height:1.1; margin:0 0 8px}
 /* Header */
 header{display:flex;align-items:center;gap:16px;margin-bottom:8px}
 nav{display:flex;gap:24px}
-nav a{
-  color:var(--text); text-decoration:none; font-weight:600; position:relative;
-}
+nav a{color:var(--text); text-decoration:none; font-weight:600; position:relative}
 nav a.is-active::after{
   content:""; position:absolute; left:0; right:0; bottom:-8px; height:3px; border-radius:3px; background:var(--link);
 }
@@ -44,10 +42,9 @@ nav a.is-active::after{
   background:var(--card);
   border-radius:var(--radius);
   box-shadow:0 1px 2px rgba(17,24,39,.04), 0 8px 20px rgba(17,24,39,.06);
-  padding:24px;            /* одинаковые отступы со всех сторон */
+  padding:24px;                 /* одинаковые отступы со всех сторон */
   margin-top:16px;
 }
-.hero{display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
 .muted{color:var(--muted)}
 
 /* Кнопки */
@@ -68,7 +65,7 @@ nav a.is-active::after{
 /* Ближайшая запись — строка фиксированной высоты (без скачков) */
 .next-slot-row{
   display:flex; align-items:center; gap:12px;
-  min-height:48px;              /* резерв высоты */
+  min-height:48px;
   margin-bottom:6px;
 }
 .next-slot__text strong{font-weight:700}
@@ -83,17 +80,15 @@ nav a.is-active::after{
 }
 
 /* Календарь */
-.controls{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.controls{display:flex;align-items:center;gap:8px;margin:10px 0}
 .month-label{font-weight:700;margin-left:4px}
 .cal{width:100%;border-collapse:separate;border-spacing:14px 16px}
 .cal th{text-align:left;color:var(--muted);font-weight:700}
-.cal td{
-  width:1%; /* даём таблице самой подбирать ширину */
-}
+.cal td{width:1%}
 .day{
   width:100%;
-  aspect-ratio: 6/7;                        /* ближе к квадрату */
-  min-height:68px;                           /* на больших экранах */
+  aspect-ratio: 6/7;                 /* ближе к квадрату */
+  min-height:68px;                    /* на десктопе */
   border:1px solid var(--line);
   border-radius:18px;
   background:#fff;
@@ -117,12 +112,9 @@ nav a.is-active::after{
 /* Формы */
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media (max-width:600px){.row2{grid-template-columns:1fr}}
-.input{
-  width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;
-  background:#fff; outline:none;
-}
+.input{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff; outline:none}
 .input:focus{border-color:var(--link); box-shadow:0 0 0 3px var(--ring)}
 textarea.input{min-height:110px;resize:vertical}
 
-/* Подсказки и итоги */
+/* Вывод результата */
 #booking-out{margin-top:10px}
