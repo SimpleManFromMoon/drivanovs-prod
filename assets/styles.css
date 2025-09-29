@@ -231,3 +231,46 @@ h1.title{font-size:40px; line-height:1.1; margin:0}
 /* больше расстояние именно для пары "календарь—форма" */
 .grid-gap-xl{gap:36px}
 @media (min-width: 1200px){ .grid-gap-xl{gap:56px} }
+
+/* --- календарь: компактный и резиновый на мобиле --- */
+
+/* колонки не должны расползаться из-за длинного текста */
+.cal-week{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:8px; color:var(--muted); font-weight:700; margin:14px 0 8px }
+.cal-grid{ display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:8px }
+
+/* заголовки недель не должны влиять на ширину */
+.cal-week > *{ min-width:0; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+
+/* квадратные дни + точки внутрь потока */
+.cal-day{
+  border-radius:12px;
+  aspect-ratio:1/1;
+  height:auto;
+  padding:10px;
+  display:flex; flex-direction:column; justify-content:flex-start;
+}
+.cal-day.dim{ color:#9aa1ad; opacity:.6 }
+.cal-dots{ display:flex; gap:4px; margin-top:auto }
+.cal-grid .cal-dot{ width:8px; height:8px; border-radius:50% }
+.cal-dot--office{ background:#10b981 }
+.cal-dot--online{ background:#3b82f6 }
+
+/* мобильные тюнинги */
+@media (max-width: 480px){
+  .container{ padding:20px 14px }
+  .card{ padding:16px }
+  .cal-head{ flex-wrap:wrap; gap:8px }
+  .cal-title{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis }
+  .month-btn{ min-width:36px; height:36px }
+  .month-today{ padding:6px 10px }
+  .cal-week{ gap:6px; font-size:.9rem }
+  .cal-grid{ gap:6px }
+  .cal-day{ padding:8px; border-radius:10px }
+  .cal-grid .cal-dot{ width:6px; height:6px }
+}
+
+@media (max-width: 360px){
+  .cal-week{ gap:4px }
+  .cal-grid{ gap:4px }
+  .cal-day{ padding:6px }
+}
