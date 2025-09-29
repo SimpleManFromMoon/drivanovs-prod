@@ -1,181 +1,264 @@
 // assets/calendar.js
 (function(){
-  window.state = window.state || { current: new Date(), slotsByDate:{}, selected:null };
-  window.SLOTS_CACHE = window.SLOTS_CACHE || {};
-  const INFLIGHT = {};        // { monthKey: {script, cbName, timer} }
-  const RETRY_MS = 5000;      // повтор через 5 c при ошибке
-  const TIMEOUT_MS = 10000;   // таймаут JSONP 10 c
-  const $ = (s)=>document.querySelector(s);
-  const $$ = (s)=>Array.from(document.querySelectorAll(s));
-  const pad = (n)=>String(n).padStart(2,'0');
-  const ymd = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  const startOfMonth=(d)=>new Date(d.getFullYear(), d.getMonth(),1);
-  const endOfMonth=(d)=>new Date(d.getFullYear(), d.getMonth()+1,0);
-  function monthKeyOf(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}`; }
-  window.monthKeyOf = monthKeyOf;
+  const CFG = window.APP_CONFIG || {};
+  const ENDPOINT = CFG.ENDPOINT;
+
+  // --- utils ---
+  const atStartOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  function addDays(d, n){ const out = new Date(d.getFullYear(), d.getMonth(), d.getDate()+n); out.setHours(0,0,0,0); return out; }
+  const ymd = d => (typeof d === 'string') ? d : d.toISOString().slice(0,10);
+
+  // --- DOM ---
+  const titleEl   = () => document.getElementById('calTitle');
+  const gridEl    = () => document.getElementById('calGrid');
+  const weekEl    = () => document.getElementById('calWeek');
+  const slotsEl   = () => document.getElementById('timeSlots');
+  const dateInput = () => document.querySelector('input[name="date"]');
+  const timeInput = () => document.querySelector('input[name="time"]');
+  const modeSelect= () => document.getElementById('modeSelect');
+  const kindInput = () => document.getElementById('kindInput');
+  const chosenEl  = () => document.getElementById('chosen');
+  const filterOffice = () => document.getElementById('filterOffice');
+  const filterOnline = () => document.getElementById('filterOnline');
+
+  // --- state ---
+  const state = {
+    monthDate: atStartOfDay(new Date()),
+    selectedDate: null,
+    selectedTime: null,
+    selectedKind: null,
+    filters: { office:true, online:true },
+    daysMap: new Map(), // dateStr -> {office:[], online:[]}
+    cache: {} // month span -> loaded
+  };
+
+  // --- i18n tiny ---
+  function t(key, fb){ try{ return (window.I18N && I18N.t(key)) || fb; }catch(e){ return fb; } }
+  const TYPE_NAME = { office: t('type.office','очно'), online: t('type.online','онлайн') };
+
+  // --- skeleton ---
+  function renderCalendarSkeleton(container, showHeaders = true) {
+    container.innerHTML = '';
+    const sk = document.createElement('div');
+    sk.className = 'cal-skeleton';
+    if (showHeaders) for (let i=0;i<7;i++){ const h=document.createElement('div'); h.className='cal-skel-header'; sk.appendChild(h); }
+    for (let i=0;i<42;i++){ const c=document.createElement('div'); c.className='cal-skel-cell'; sk.appendChild(c); }
+    container.appendChild(sk);
+  }
+  function setCalendarLoading(isLoading, container) {
+    const live = document.getElementById('cal-live');
+    if (isLoading) { renderCalendarSkeleton(container, true); if (live) live.textContent = t('cal.loading','загрузка календаря…'); }
+    else { if (live) live.textContent = t('cal.loaded','календарь загружен'); }
+  }
+
+  // --- jsonp ---
+  async function jsonp(url){
+    return new Promise((resolve,reject)=>{
+      const cb = '__cb_'+Math.random().toString(36).slice(2);
+      window[cb] = (data)=>{ resolve(data); cleanup(); };
+      function cleanup(){ try{ delete window[cb]; s.remove(); }catch(e){} }
+      const s = document.createElement('script');
+      s.src = url + (url.includes('?')?'&':'?') + 'callback=' + cb;
+      s.onerror = ()=>{ cleanup(); reject(new Error('JSONP failed')); };
+      document.head.appendChild(s);
+    });
+  }
+  if(!window.jsonp) window.jsonp = jsonp;
+
+  // --- week header ---
+  function buildWeekHeader(){
+    const names = [t('cal.mon','Пн'),t('cal.tue','Вт'),t('cal.wed','Ср'),t('cal.thu','Чт'),t('cal.fri','Пт'),t('cal.sat','Сб'),t('cal.sun','Вс')];
+    weekEl().innerHTML = names.map(n=>`<div class="cal-w">${n}</div>`).join('');
+  }
+
+  function dotsHtml(dateStr){
+    const o = state.daysMap.get(dateStr);
+    if(!o) return '';
+    let h = '';
+    if(state.filters.office && (o.office||[]).length){
+      h += `<span class="cal-dot cal-dot--office" title="${TYPE_NAME.office}"></span>`;
+    }
+    if(state.filters.online && (o.online||[]).length){
+      h += `<span class="cal-dot cal-dot--online" title="${TYPE_NAME.online}"></span>`;
+    }
+    return h;
+  }
 
   function buildGrid(){
-    const table = $('#calendar table tbody');
-    if(!table) return;
-    table.innerHTML='';
-    const first = startOfMonth(state.current);
-    const startWeekday = (first.getDay()+6)%7; // Mon=0
-    let cur = new Date(first); cur.setDate(cur.getDate()-startWeekday);
-    for(let r=0;r<6;r++){
-      const tr=document.createElement('tr');
-      for(let c=0;c<7;c++){
-        const td=document.createElement('td');
-        td.setAttribute('data-date', ymd(cur));
-        td.textContent = cur.getDate();
-        const today = new Date(); const ymdToday = ymd(today);
-        if (ymd(cur) === ymdToday) td.classList.add('today');
-        if (cur.getMonth() !== state.current.getMonth()) td.classList.add('other-month');
-        tr.appendChild(td);
-        cur.setDate(cur.getDate()+1);
-      }
-      table.appendChild(tr);
+    const d0 = state.monthDate;
+    const firstDow = (new Date(d0.getFullYear(), d0.getMonth(), 1)).getDay() || 7; // 1..7 (Mon..Sun)
+    const gridStart = addDays(new Date(d0.getFullYear(), d0.getMonth(), 1), -(firstDow-1));
+    const total = 42;
+
+    const today = ymd(atStartOfDay(new Date()));
+    let html = '';
+    for(let i=0;i<total;i++){
+      const d = addDays(gridStart, i);
+      const ds = ymd(d);
+      const inMonth = d.getMonth() === d0.getMonth();
+      const isToday = ds === today;
+      const isSel = state.selectedDate === ds;
+      html += `<button class="cal-day${inMonth?'':' dim'}${isToday?' today':''}${isSel?' selected':''}" data-id="${ds}">
+        <div class="cal-num">${d.getDate()}</div>
+        <div class="cal-dots">${dotsHtml(ds)}</div>
+      </button>`;
     }
-    $('#month-label').textContent = state.current.toLocaleDateString(undefined,{month:'long', year:'numeric'});
-    paintDots();
+    gridEl().innerHTML = html;
+    gridEl().querySelectorAll('.cal-day').forEach(b=> b.addEventListener('click', ()=> selectDate(b.dataset.id)));
+
+    const monthName = d0.toLocaleString(undefined,{month:'long'});
+    titleEl().innerHTML = `${monthName} <b>${d0.getFullYear()}</b>`;
   }
 
-  function paintDots(){
-    $$('#calendar td[data-date]').forEach(td=>{
-      const date = td.getAttribute('data-date');
-      const has = state.slotsByDate[date];
-      td.classList.toggle('has-slots', Array.isArray(has) && has.length>0);
-    });
+  function priceFor(kind, dateStr){
+    const cfg = (CFG.PRICING||{})[kind] || {};
+    if (cfg.overrides && cfg.overrides[dateStr]!=null) return cfg.overrides[dateStr];
+    const d = new Date(dateStr+'T00:00');
+    let wd = d.getDay(); wd = wd===0 ? 7 : wd; // 1..7
+    if (cfg.byWeekday && cfg.byWeekday[wd]!=null) return cfg.byWeekday[wd];
+    return cfg.default ?? null;
   }
 
-  function attachHandlers(){
-    $('#prev')?.addEventListener('click',()=>{
-      state.current = new Date(state.current.getFullYear(), state.current.getMonth()-1, 1);
-      buildGrid(); loadMonth(true);
-    });
-    $('#next')?.addEventListener('click',()=>{
-      state.current = new Date(state.current.getFullYear(), state.current.getMonth()+1, 1);
-      buildGrid(); loadMonth(true);
-    });
-    document.addEventListener('click',(e)=>{
-      const td = e.target.closest('#calendar td[data-date]'); if(!td) return;
-      $$('#calendar td').forEach(x=>x.classList.remove('active'));
-      td.classList.add('active');
-      loadDaySlots(td.getAttribute('data-date'));
-    });
+  function setNoSlotsMsg(show){
+    const holder = slotsEl(), empty = holder.querySelector('.no-slots');
+    if(show){ if(!empty) holder.insertAdjacentHTML('beforeend', `<div class="no-slots small">${t('booking.no_slots','на данный момент нет свободных мест')}</div>`); }
+    else { if(empty) empty.remove(); }
   }
 
-  function loadSlotsJSONP(from, to, monthKey){
-    if (INFLIGHT[monthKey]) return;
+  function renderSlotsList(dateStr){
+    const obj = state.daysMap.get(dateStr) || {office:[], online:[]};
+    let items = [];
+    if(state.filters.office) (obj.office||[]).forEach(t=> items.push({kind:'office', t}));
+    if(state.filters.online) (obj.online||[]).forEach(t=> items.push({kind:'online', t}));
+    items.sort((a,b)=> a.t.localeCompare(b.t));
 
-    // <-- вот эти две строки новые
-    const safeKey = String(monthKey).replace(/[^0-9A-Za-z_]/g, '_'); // '2025-09' -> '2025_09'
-    const cbName  = `__onSlots_${safeKey}_${Date.now()}`;
+    const el = slotsEl();
+    el.innerHTML = '';
+    const legend = `<div class="slot-legend">
+      <span><i style="background:${CFG.COLORS.office}"></i> ${TYPE_NAME.office}</span>
+      <span><i style="background:${CFG.COLORS.online}"></i> ${TYPE_NAME.online}</span>
+    </div>`;
+    el.insertAdjacentHTML('beforeend', legend);
 
-    const s = document.createElement('script');
-    s.id = `jsonp-slots-${safeKey}`;
-    s.src = `${APP_CONFIG.ENDPOINT}?action=slots&from=${from}&to=${to}`
-          + `&callback=${cbName}&v=${Date.now()}`;
+    if(items.length===0){ setNoSlotsMsg(true); return; } else { setNoSlotsMsg(false); }
 
-    const cleanup = () => {
-      if (INFLIGHT[monthKey]?.timer) clearTimeout(INFLIGHT[monthKey].timer);
-      try { delete window[cbName]; } catch(_) {}
-      s.remove();
-      delete INFLIGHT[monthKey];
-    };
-
-    window[cbName] = function(payload){
-      if (monthKeyOf(state.current) === monthKey) {
-        const map = {};
-        (payload?.days || []).forEach(d => map[d.date] = d.slots || []);
-        SLOTS_CACHE[monthKey] = map;
-        state.slotsByDate = map;
-        paintDots();
-        if (state.selected?.date) renderDaySlots(state.selected.date);
-      }
-      cleanup();
-    };
-
-    s.onerror = () => {
-      console.warn('[slots] JSONP error for', monthKey);
-      cleanup();
-      if (monthKeyOf(state.current) === monthKey) {
-        setTimeout(() => loadSlotsJSONP(from, to, monthKey), RETRY_MS);
-      }
-    };
-
-    INFLIGHT[monthKey] = {
-      script: s,
-      timer: setTimeout(() => {
-        console.warn('[slots] JSONP timeout for', monthKey);
-        s.dispatchEvent(new Event('error'));
-      }, TIMEOUT_MS)
-    };
-
-    document.body.appendChild(s);
-  }
-
-  window.loadMonth = function(force=false){
-    const key = monthKeyOf(state.current);
-    if(!force && SLOTS_CACHE[key]){
-      state.slotsByDate = SLOTS_CACHE[key];
-      paintDots(); return;
-    }
-    const from = ymd(startOfMonth(state.current));
-    const to   = ymd(endOfMonth(state.current));
-    loadSlotsJSONP(from,to,key);
-  };
-
-  window.loadDaySlots = function(dateStr){
-    state.selected = {date:dateStr, time:null};
-    renderDaySlots(dateStr);
-  };
-
-  function renderDaySlots(dateStr){
-    const box = $('#day-slots'); if(!box) return;
-    box.innerHTML='';
-    const list = state.slotsByDate[dateStr] || [];
-    if(list.length===0){ box.innerHTML = `<p class="muted">—</p>`; return; }
-    list.forEach(t=>{
-      const b=document.createElement('button');
-      b.className='chip'; b.type='button'; b.textContent=t;
-      b.addEventListener('click',()=>{
-        state.selected={date:dateStr, time:t};
-        $$('#day-slots .chip').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-        const chosen=$('#chosen'); if(chosen) chosen.textContent = `${dateStr} ${t}`;
-        const form=$('#booking-form'); if(form){ form.date.value=dateStr; form.time.value=t; }
+    items.forEach(({kind,t})=>{
+      const price = priceFor(kind,dateStr);
+      const b = document.createElement('button');
+      b.className = `slot slot--${kind}`;
+      b.dataset.t = t; b.dataset.kind = kind;
+      b.textContent = price ? `${t} · ${TYPE_NAME[kind]} · ${price}€` : `${t} · ${TYPE_NAME[kind]}`;
+      b.addEventListener('click', ()=>{
+        timeInput().value = t;
+        (kindInput()||{}).value = kind;
+        if(modeSelect()){ modeSelect().value = (kind==='office'?'in_person':'online'); modeSelect().setAttribute('disabled','disabled'); }
+        state.selectedTime = t; state.selectedKind = kind; state.selectedDate = dateStr;
+        dateInput().value = dateStr;
+        el.querySelectorAll('.slot').forEach(x=>x.classList.remove('selected'));
+        b.classList.add('selected');
+        if(chosenEl()){
+          const priceTxt = price ? ` · ${price}€` : '';
+          chosenEl().textContent = `${TYPE_NAME[kind]} · ${t}${priceTxt}`;
+        }
       });
-      box.appendChild(b);
+      el.appendChild(b);
     });
   }
 
-  // локально удалить слот после брони (чтобы сразу пропал)
-  window.locallyRemoveSlot = function(dateStr, timeStr){
-    if(state.slotsByDate[dateStr]){
-      state.slotsByDate[dateStr] = state.slotsByDate[dateStr].filter(x=>x!==timeStr);
+  function selectDate(ds){
+    state.selectedDate = ds;
+    dateInput().value = ds;
+    gridEl().querySelectorAll('.cal-day').forEach(x=> x.classList.toggle('selected', x.dataset.id===ds));
+    renderSlotsList(ds);
+  }
+
+  async function ensureMonthLoaded(d){
+    const from = new Date(d.getFullYear(), d.getMonth(), 1);
+    const to   = new Date(d.getFullYear(), d.getMonth()+1, 0);
+    const key  = ymd(from)+'__'+ymd(to);
+    if(state.cache[key]) return;
+    setCalendarLoading(true, gridEl());
+    try{
+      const url = `${ENDPOINT}?action=slots&from=${ymd(from)}&to=${ymd(to)}`;
+      const data = await jsonp(url);
+      (data.days||[]).forEach(day=>{
+        state.daysMap.set(day.date, {office: day.office||[], online: day.online||[]});
+      });
+      state.cache[key] = true;
+    }finally{ setCalendarLoading(false, gridEl()); }
+  }
+
+  function showMonth(d){
+    state.monthDate = atStartOfDay(new Date(d.getFullYear(), d.getMonth(), 1));
+    buildWeekHeader(); buildGrid();
+  }
+
+  async function init(){
+    document.getElementById('btnPrev')?.addEventListener('click', async ()=>{
+      const d=new Date(state.monthDate.getFullYear(), state.monthDate.getMonth()-1, 1);
+      await ensureMonthLoaded(d); showMonth(d);
+    });
+    document.getElementById('btnNext')?.addEventListener('click', async ()=>{
+      const d=new Date(state.monthDate.getFullYear(), state.monthDate.getMonth()+1, 1);
+      await ensureMonthLoaded(d); showMonth(d);
+    });
+    document.getElementById('btnToday')?.addEventListener('click', async ()=>{
+      const d=atStartOfDay(new Date());
+      const m=new Date(d.getFullYear(), d.getMonth(), 1);
+      await ensureMonthLoaded(m); showMonth(d);
+    });
+
+    
+    if(filterOffice()) filterOffice().addEventListener('change', e=>{
+      state.filters.office = e.target.checked;
+      buildGrid();                              // ← ОБНОВИТЬ ТОЧКИ
+      if(state.selectedDate) renderSlotsList(state.selectedDate);
+    });
+    if(filterOnline()) filterOnline().addEventListener('change', e=>{
+      state.filters.online = e.target.checked;
+      buildGrid();
+      if(state.selectedDate) renderSlotsList(state.selectedDate);
+    });
+
+    await ensureMonthLoaded(state.monthDate); showMonth(state.monthDate);
+
+    // прыжок к ближайшему слоту
+    let nearest=null, now=new Date();
+    [...state.daysMap.keys()].sort().forEach(ds=>{
+      const o=state.daysMap.get(ds);
+      ['office','online'].forEach(k=> (o[k]||[]).forEach(t=>{
+        const dt=new Date(ds+'T'+t+':00');
+        if(dt>now && (!nearest || dt<nearest.dt)) nearest={date:ds,time:t,kind:k,dt};
+      }));
+    });
+    if(nearest){ showMonth(new Date(nearest.date+'T00:00:00')); selectDate(nearest.date); }
+    else { setNoSlotsMsg(true); slotsEl().innerHTML=''; }
+  }
+
+  // локальное удаление после брони
+  function locallyRemoveSlot(dateStr, timeStr, kind){
+    const obj = state.daysMap.get(dateStr); if(!obj) return;
+    const arr = obj[kind]||[]; const i = arr.indexOf(timeStr);
+    if(i>-1) arr.splice(i,1); obj[kind]=arr; state.daysMap.set(dateStr,obj);
+
+    if(state.selectedDate===dateStr){
+      const btn = slotsEl().querySelector(`.slot[data-t="${timeStr}"][data-kind="${kind}"]`);
+      if(btn) btn.remove();
+      if(chosenEl() && state.selectedTime===timeStr) chosenEl().textContent='';
+      if((obj.office.length+obj.online.length)===0){ slotsEl().innerHTML=''; setNoSlotsMsg(true); }
     }
-    const key = monthKeyOf(new Date(dateStr));
-    if(SLOTS_CACHE[key] && SLOTS_CACHE[key][dateStr]){
-      SLOTS_CACHE[key][dateStr] = SLOTS_CACHE[key][dateStr].filter(x=>x!==timeStr);
+    const cell = gridEl().querySelector(`.cal-day[data-id="${dateStr}"]`);
+    if(cell){
+      if(obj.office.length===0) cell.querySelector('.cal-dot--office')?.remove();
+      if(obj.online.length===0) cell.querySelector('.cal-dot--online')?.remove();
     }
-    renderDaySlots(dateStr); paintDots();
-  };
+  }
+  window.locallyRemoveSlot = locallyRemoveSlot;
 
-  document.addEventListener('DOMContentLoaded',()=>{
-    buildGrid(); attachHandlers(); loadMonth(false);
-  });
+  // навигация
+  window.calPrev  = async ()=>{ const d=new Date(state.monthDate.getFullYear(), state.monthDate.getMonth()-1,1); await ensureMonthLoaded(d); showMonth(d); };
+  window.calNext  = async ()=>{ const d=new Date(state.monthDate.getFullYear(), state.monthDate.getMonth()+1,1); await ensureMonthLoaded(d); showMonth(d); };
+  window.calToday = async ()=>{ const d=atStartOfDay(new Date()); await ensureMonthLoaded(new Date(d.getFullYear(), d.getMonth(),1)); showMonth(d); };
 
-  // обновляем только при возвращении на вкладку И только если нет запроса
-  document.addEventListener('visibilitychange', ()=>{
-    if (document.visibilityState === 'visible'){
-      const key = monthKeyOf(state.current);
-      if (!INFLIGHT[key]) loadMonth(true);
-      if (state.selected?.date) renderDaySlots(state.selected.date);
-    }
-  });
-
-  // лёгкий авторефреш выбранного дня (не трогая месяц)
-  setInterval(()=>{
-    if (state.selected?.date) renderDaySlots(state.selected.date);
-  }, 30000);
-
+  document.addEventListener('DOMContentLoaded', init);
 })();
