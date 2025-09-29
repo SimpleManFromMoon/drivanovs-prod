@@ -175,5 +175,7 @@
     "en": "loading calendar…"
   },
   "form.checking": { "ru": "Проверяем…", "lv": "Pārbaudām…", "en": "Checking…" },
-  "form.booking":  { "ru": "Бронируем…",  "lv": "Rezervējam…", "en": "Booking…" }
+  "form.booking":  { "ru": "Бронируем…",  "lv": "Rezervējam…", "en": "Booking…" },
+  "type.office": { "ru":"очно", "lv":"klātienē", "en":"in-person" },
+  "type.online": { "ru":"онлайн", "lv":"tiešsaistē", "en":"online" }
 }

@@ -1,32 +1,32 @@
-
 // assets/app.js
 function validateForm(form){
-  const RX = {
-    name: /^[A-Za-zĀ-žÀ-ÿЁёА-Яа-я\-'\s]{2,80}$/,
-    phone: /^\+?[0-9\s\-()]{7,20}$/
-  };
+  const RX = { name:/^[A-Za-zĀ-žÀ-ÿЁёА-Яа-я\-'\s]{2,80}$/, phone:/^\+?[0-9\s\-()]{7,20}$/ };
   const name = (form.name?.value||'').trim();
-  const email = (form.email?.value||'').trim();
-  const phone = (form.phone?.value||'').trim();
-
+  const email= (form.email?.value||'').trim();
+  const phone= (form.phone?.value||'').trim();
   if(!name || !RX.name.test(name)) return {ok:false, msg:'Неверно указано имя.'};
   if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return {ok:false, msg:'Проверьте e-mail.'};
   if(phone && !RX.phone.test(phone)) return {ok:false, msg:'Проверьте телефон.'};
   return {ok:true};
 }
 
-function checkSlot(dateStr, timeStr){
-  return new Promise((resolve)=>{
-    const cb = '__check_cb_' + Date.now();
-    window[cb] = (data)=>{ try{ delete window[cb]; }catch(_){}
-      document.getElementById('jsonp-check')?.remove();
-      resolve(!!(data && data.ok));
-    };
-    const s = document.createElement('script');
-    s.id = 'jsonp-check';
-    s.src = `${APP_CONFIG.ENDPOINT}?action=check&date=${encodeURIComponent(dateStr)}&time=${encodeURIComponent(timeStr)}&callback=${cb}&v=${Date.now()}`;
-    document.body.appendChild(s);
+async function jsonp(url){
+  return new Promise((resolve,reject)=>{
+    const cb='__cb_'+Math.random().toString(36).slice(2);
+    window[cb]=(data)=>{ resolve(data); cleanup(); };
+    function cleanup(){ try{ delete window[cb]; s.remove(); }catch(e){} }
+    const s=document.createElement('script');
+    s.src = url + (url.includes('?')?'&':'?') + 'callback='+cb;
+    s.onerror=()=>{ cleanup(); reject(new Error('JSONP failed')); };
+    document.head.appendChild(s);
   });
+}
+
+async function checkSlot(date, time, kind){
+  const url = `${APP_CONFIG.ENDPOINT}?action=check&date=${date}&time=${time}&dur=${APP_CONFIG.SLOT_MINUTES||30}&kind=${kind}`;
+  const data = await (window.jsonp? window.jsonp(url) : jsonp(url));
+  // backend: ok = true если окно существует в календаре доступности
+  return !!(data && data.ok);
 }
 
 async function submitBooking(e){
@@ -36,56 +36,47 @@ async function submitBooking(e){
   const out  = document.getElementById('booking-out');
   const initial = btn.textContent;
 
-  // honeypot
-  if (form.website && form.website.value.trim()!==''){ return; }
+  if (form.website && form.website.value.trim()!==''){ return; } // honeypot
 
   if(!form.date.value || !form.time.value){
-    out.innerHTML = `<div class="notice err">${I18N.t('form.pick')}</div>`; return;
+    out.innerHTML = `<div class="notice err">${(window.I18N?I18N.t('form.pick'):'Выберите дату и время.')}</div>`;
+    return;
   }
 
-  btn.classList.add('loading');
-  btn.disabled = true;
-  btn.textContent = (window.I18N ? I18N.t('form.checking') : 'Проверяем…');
+  // тип из select (он отключен, но значение обновляет календарь)
+  const kind = (form.mode?.value === 'in_person') ? 'office' : 'online';
 
-  // ⚡ живой чек перед отправкой
-  const stillOk = await checkSlot(form.date.value, form.time.value);
-  if (!stillOk){
+  // мгновенная обратная связь
+  btn.classList.add('loading'); btn.disabled = true;
+  btn.textContent = (window.I18N? I18N.t('form.checking') : 'Проверяем…');
+
+  const ok = await checkSlot(form.date.value, form.time.value, kind);
+  if(!ok){
     out.innerHTML = `<div class="notice err">Увы, слот уже занят. Обновляю список…</div>`;
-    if (typeof loadDaySlots==='function') loadDaySlots(form.date.value);
-    if (typeof loadMonth==='function') loadMonth(true);
-
-    // ⬇ вернуть кнопку в исходное состояние
-    btn.classList.remove('loading');
-    btn.disabled = false;
-    btn.textContent = initial;
+    btn.classList.remove('loading'); btn.disabled=false; btn.textContent = initial;
     return;
   }
 
   const v = validateForm(form);
   if(!v.ok){
     out.innerHTML = `<div class="notice err">${v.msg}</div>`;
-    btn.classList.remove('loading');
-    btn.disabled = false;
-    btn.textContent = initial;
+    btn.classList.remove('loading'); btn.disabled=false; btn.textContent=initial;
     return;
   }
 
-  const bookedDate = form.date.value;
-  const bookedTime = form.time.value;
-
-  // ⬇ меняем текст на следующий этап
-  btn.textContent = (window.I18N ? I18N.t('form.booking') : 'Бронируем…');
+  // второй этап — бронирование
+  btn.textContent = (window.I18N? I18N.t('form.booking') : 'Бронируем…');
   out.textContent='';
 
   const payload = {
-    name: (form.name?.value||'').trim(),
-    email:(form.email?.value||'').trim(),
-    phone:(form.phone?.value||'').trim(),
-    date: bookedDate, time: bookedTime,
+    name: form.name.value.trim(),
+    email: form.email.value.trim(),
+    phone: form.phone.value.trim(),
+    notes: (form.notes?.value||'').trim(),
+    date: form.date.value, time: form.time.value,
+    kind, durationMin: APP_CONFIG.SLOT_MINUTES || 30,
     tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    mode: form.mode.value,
-    notes:(form.notes?.value||'').trim(),
-    durationMin: 25
+    source: 'web'
   };
 
   try{
@@ -95,21 +86,14 @@ async function submitBooking(e){
       body: JSON.stringify(payload)
     });
 
-    if(typeof locallyRemoveSlot==='function') locallyRemoveSlot(bookedDate, bookedTime);
-    out.innerHTML = `<div class="notice ok">${I18N.t('form.ok')}</div>`;
-    form.reset?.(); if(window.state) state.selected=null;
+    if(typeof window.locallyRemoveSlot==='function') window.locallyRemoveSlot(payload.date, payload.time, kind);
+    out.innerHTML = `<div class="notice ok">${(window.I18N?I18N.t('form.ok'):'Бронирование прошло успешно. Мы отправили письмо на ваш e-mail.')}</div>`;
+    form.reset?.();
     const chosen=document.getElementById('chosen'); if(chosen) chosen.textContent='';
-    if(window.SLOTS_CACHE && typeof monthKeyOf==='function'){
-      delete SLOTS_CACHE[monthKeyOf(new Date(bookedDate))];
-    }
-    if(typeof loadMonth==='function') loadMonth(true);
-    if(typeof loadDaySlots==='function') loadDaySlots(bookedDate);
-
   }catch(err){
-    out.innerHTML = `<div class="notice err">${I18N.t('form.err')}</div>`;
+    console.error(err);
+    out.innerHTML = `<div class="notice err">${(window.I18N?I18N.t('form.err'):'Не получилось забронировать. Попробуйте ещё раз.')}</div>`;
   }finally{
-    btn.classList.remove('loading');    // ⬅ убрать подсветку/спиннер
-    btn.disabled = false;
-    btn.textContent = initial;
+    btn.classList.remove('loading'); btn.disabled=false; btn.textContent=initial;
   }
 }

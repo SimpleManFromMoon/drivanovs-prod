@@ -40,8 +40,25 @@
       <div id="cal-live" class="visually-hidden" aria-live="polite"></div>
 
       <div style="margin-top:16px">
-        <div class="small" data-i18n="booking.slotsTitle">Доступное время:</div>
-        <div class="slots" id="timeSlots"></div>
+        <div class="small" data-i18n="booking.available">Доступное время:</div>
+          
+          <!-- фильтры -->
+          <div class="filter-bar">
+            <label class="filter-chip">
+              <input type="checkbox" id="filterOffice" checked>
+              <i class="type-dot" style="background:#10b981"></i>
+              <span data-i18n="type.office">очно</span>
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" id="filterOnline" checked>
+              <i class="type-dot" style="background:#3b82f6"></i>
+              <span data-i18n="type.online">онлайн</span>
+            </label>
+          </div>
+
+          <!-- список слотов -->
+          <div class="slots" id="timeSlots"></div>
+          <div id="chosen" class="small"></div>
       </div>
 
       <p class="small" style="margin-top:16px" data-i18n="booking.legend">
@@ -71,10 +88,11 @@
           </div>
           <div>
             <label class="small" data-i18n="form.mode">Формат визита</label>
-            <select class="input" name="mode">
-              <option value="in_person" data-i18n="form.mode.in_person">Очный визит</option>
-              <option value="online" data-i18n="form.mode.online">Онлайн</option>
-            </select>
+              <select class="input" name="mode" id="modeSelect" disabled>
+                <option value="in_person" data-i18n="form.mode.in_person">Очный визит</option>
+                <option value="online"    data-i18n="form.mode.online">Онлайн</option>
+              </select>
+              <input type="hidden" name="kind" id="kindInput" />
           </div>
           <div>
             <label class="small" data-i18n="form.date">Дата</label>
