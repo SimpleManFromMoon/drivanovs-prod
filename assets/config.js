@@ -6,11 +6,11 @@
   const CONFIG_MAP = {
     local: {
       ORIGIN: 'http://localhost:8080',
-      ENDPOINT: 'https://script.google.com/macros/s/AKfycbytXlQA7WxAQXBrydjRfGqZrg1mt8WII7FsGJYwCYlt3QMAs0qEudR8VgAThycGPhfplQ/exec'
+      ENDPOINT: 'https://script.google.com/macros/s/AKfycbybjMNUDCDsRr8G4zjS9EzZeAC2kKN2mQDXeWUBTsFfrc_v7RVZOZqlFOUwxOa6ikKyuQ/exec'
     },
     prod: {
       ORIGIN: 'https://simplemanfrommoon.github.io/drivanovs-prod/',
-      ENDPOINT: 'https://script.google.com/macros/s/AKfycbytXlQA7WxAQXBrydjRfGqZrg1mt8WII7FsGJYwCYlt3QMAs0qEudR8VgAThycGPhfplQ/exec'
+      ENDPOINT: 'https://script.google.com/macros/s/AKfycbybjMNUDCDsRr8G4zjS9EzZeAC2kKN2mQDXeWUBTsFfrc_v7RVZOZqlFOUwxOa6ikKyuQ/exec'
     }
   };
 
