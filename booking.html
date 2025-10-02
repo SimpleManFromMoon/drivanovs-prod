@@ -24,9 +24,25 @@
     <div>
       <div class="cal-head">
         <button id="btnPrev" class="btn month-btn" aria-label="Предыдущий месяц">‹</button>
-        <button id="btnToday" class="btn ghost month-today" data-i18n="cal.today">Сегодня</button>
+        <button id="btnToday" class="btn month-btn month-today" data-i18n="cal.today">Сегодня</button>
         <button id="btnNext" class="btn month-btn" aria-label="Следующий месяц">›</button>
         <div class="cal-title" id="calTitle" style="margin-left:10px">—</div>
+      </div>
+
+      <div style="margin-top:16px">
+        <!-- фильтры -->
+          <div class="filter-bar">
+            <label class="filter-chip">
+              <input type="checkbox" id="filterOffice" checked>
+              <i class="type-dot" style="background:#10b981"></i>
+              <span data-i18n="type.office">очно</span>
+            </label>
+            <label class="filter-chip">
+              <input type="checkbox" id="filterOnline" checked>
+              <i class="type-dot" style="background:#3b82f6"></i>
+              <span data-i18n="type.online">онлайн</span>
+            </label>
+          </div>
       </div>
 
       <div class="cal-week" id="calWeek"></div>
@@ -41,21 +57,6 @@
 
       <div style="margin-top:16px">
         <div class="small" data-i18n="booking.available">Доступное время:</div>
-          
-          <!-- фильтры -->
-          <div class="filter-bar">
-            <label class="filter-chip">
-              <input type="checkbox" id="filterOffice" checked>
-              <i class="type-dot" style="background:#10b981"></i>
-              <span data-i18n="type.office">очно</span>
-            </label>
-            <label class="filter-chip">
-              <input type="checkbox" id="filterOnline" checked>
-              <i class="type-dot" style="background:#3b82f6"></i>
-              <span data-i18n="type.online">онлайн</span>
-            </label>
-          </div>
-
           <!-- список слотов -->
           <div class="slots" id="timeSlots"></div>
           <div id="chosen" class="small"></div>
@@ -104,8 +105,11 @@
           </div>
         </div>
         <div style="margin-top:12px">
-          <label class="small" data-i18n="form.comment">Комментарий</label>
-          <textarea class="input" name="notes" data-i18n-attr="placeholder" data-i18n-key="form.comment.ph" placeholder="Коротко о запросе (до 600 символов)"></textarea>
+          <label class="small" data-i18n="form.notes">Комментарий</label>
+          <textarea class="input" name="notes"
+            data-i18n-attr="placeholder" data-i18n-key="form.notes.ph"
+            placeholder="Коротко о запросе (до 600 символов)">
+          </textarea>
         </div>
         <div style="margin-top:16px">
           <button type="submit" class="btn blue" data-i18n="form.submit">Забронировать</button>

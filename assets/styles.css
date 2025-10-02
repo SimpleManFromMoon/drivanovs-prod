@@ -7,8 +7,12 @@
   --blue:#2463EB;
   --blue-weak:#e8efff;
   --blue-weak-2:#f3f6ff;
-  --radius:18px;
   --shadow:0 4px 28px rgba(17,24,39,.06);
+  --radius: 14px;            /* единый радиус для всего */
+  --radius-sm: 12px;
+  --slot-h: 96px;            /* высота карточки на десктопе */
+  --slot-w: 152px;
+  --touch-min: 48px;         /* минимальная тап-зона */
 }
 
 *{box-sizing:border-box}
@@ -37,10 +41,29 @@ body{
 .nav-links a{color:var(--text); text-decoration:none; padding:8px 10px; border-radius:12px}
 .nav-links a.active{color:#0b1f66; border:1px solid var(--blue); background:var(--blue-weak)}
 .lang-wrap{position:relative}
-.lang-btn{display:flex; align-items:center; gap:8px; border:1px solid var(--stroke); background:var(--card); border-radius:12px; padding:8px 10px; cursor:pointer}
-.lang-list{position:absolute; right:0; top:46px; background:var(--card); border:1px solid var(--stroke); border-radius:12px; box-shadow:var(--shadow); display:none; min-width:132px; overflow:hidden}
-.lang-list button{display:block; width:100%; text-align:left; padding:10px 12px; border:0; background:#fff; cursor:pointer}
-.lang-list button.active{background:var(--blue-weak); color:#0b1f66}
+.lang-btn{
+  display:flex; align-items:center; gap:8px;
+  border:1px solid var(--stroke); background:var(--card);
+  border-radius: var(--radius);         /* было: 12px */
+  padding:8px 10px; cursor:pointer;
+}
+.lang-list{
+  position:absolute; right:0; top:46px;
+  background:var(--card); border:1px solid var(--stroke);
+  border-radius: var(--radius);         /* было: 12px */
+  box-shadow:var(--shadow);
+  display:none; min-width:132px;
+  overflow:hidden;                      /* чтобы подсветка не выходила за скругление */
+}
+.lang-list button{
+  display:block; width:100%; text-align:left;
+  padding:10px 12px; border:0; background:#fff; cursor:pointer;
+  border-radius: 0;                      /* не спорим с радиусом контейнера */
+}
+.lang-list button:hover{ background:#f8fafc; }
+.lang-list button.active{
+  background:var(--blue-weak); color:#0b1f66;
+}
 .burger{display:none; border:1px solid var(--stroke); background:var(--card); border-radius:12px; padding:8px 10px; cursor:pointer}
 
 @media (max-width: 860px){
@@ -205,10 +228,6 @@ textarea{min-height:140px; resize:vertical}
 .filter-chip{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--stroke); padding:6px 10px; border-radius:999px; cursor:pointer; user-select:none; }
 .filter-chip input{ accent-color: var(--blue); }
 
-/* легенда и фильтры */
-.slot-legend{ display:flex; gap:14px; align-items:center; margin:6px 0 10px; color: var(--muted); }
-.slot-legend i{ width:10px; height:10px; border-radius:50%; display:inline-block; }
-
 .filter-bar{ display:flex; gap:10px; margin:6px 0 12px; flex-wrap:wrap; }
 .filter-chip{ display:inline-flex; align-items:center; gap:6px; border:1px solid var(--stroke); padding:6px 10px; border-radius:999px; cursor:pointer; user-select:none; }
 .filter-chip input{ accent-color: var(--blue); }
@@ -255,6 +274,16 @@ h1.title{font-size:40px; line-height:1.1; margin:0}
 .cal-dot--office{ background:#10b981 }
 .cal-dot--online{ background:#3b82f6 }
 
+@media (max-width: 600px){
+  :root{ --radius: 16px; --radius-sm: 14px; --slot-h: 112px; --slot-w: calc(50% - 8px); }
+  .filters{ gap:10px; }
+  .filters .chk{ padding:10px 12px; }
+  .cal-day{ min-width: var(--touch-min); min-height: var(--touch-min); }
+  .slot-card{ padding: 12px 12px; }
+  .slot-card__time{ font-size: 24px; }
+  .slot-card__price, .slot-card__kind{ font-size: 13px; }
+}
+
 /* мобильные тюнинги */
 @media (max-width: 480px){
   .container{ padding:20px 14px }
@@ -270,7 +299,154 @@ h1.title{font-size:40px; line-height:1.1; margin:0}
 }
 
 @media (max-width: 360px){
+  :root{ --slot-w: 100%; }
   .cal-week{ gap:4px }
   .cal-grid{ gap:4px }
   .cal-day{ padding:6px }
 }
+
+/* ЕДИНЫЕ радиусы */
+button, .btn, .cal-day, .pill, input, select, textarea, .slot-card{
+  border-radius: var(--radius);
+}
+
+/* Календарные дни пусть тоже используют общий радиус */
+.cal-day{
+  border-radius: var(--radius);
+}
+
+/* ФИЛЬТРЫ над календарём */
+.filters{
+  display:flex; gap:12px; align-items:center; margin: 12px 0 8px;
+  flex-wrap: wrap;
+}
+.filters .chk{ display:flex; gap:8px; align-items:center; padding:6px 10px;
+  border:1px solid #e6e8eb; border-radius: var(--radius-sm); background:#fff; }
+.filters input[type="checkbox"]{ width:16px; height:16px; }
+
+/* СЕТКА слотов */
+.slots{
+  display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start;
+  margin-top: 12px;
+}
+
+/* НОВАЯ карточка слота */
+.slot-card{
+  position:relative;
+  display:flex; flex-direction:column; justify-content:space-between; align-items:center;
+  width: var(--slot-w);
+  min-height: var(--slot-h);
+  padding: 10px 12px;
+  border:2px solid #e6e8eb;
+  background:#fff;
+  box-shadow: 0 1px 0 rgba(0,0,0,.02);
+  cursor:pointer;
+  user-select:none;
+  transition: transform .06s ease, border-color .06s ease, box-shadow .06s ease;
+}
+
+.slot-card:hover{ transform: translateY(-1px); box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.slot-card:active{ transform: translateY(0); }
+
+/* цветные обводки по типу */
+.slot--office{ border-color: var(--office, #38a169); }  /* зелёный */
+.slot--online{ border-color: var(--online, #2563eb); }  /* синий  */
+
+/* Состояние selected */
+.slot-card.selected{
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, .1);
+}
+
+/* Внутренние тексты */
+.slot-card__price{
+  align-self:flex-end;
+  font-size: 12px; line-height: 1; opacity:.75;
+}
+.slot-card__time{
+  font-size: 22px; line-height:1.1; font-variant-numeric: tabular-nums;
+}
+.slot-card__kind{
+  font-size: 12px; line-height:1; opacity:.85;
+}
+
+/* =========================
+   Hover-состояния и плавность
+   ========================= */
+:root{ --hover-bg:#f8fafc; --hover-border:#dbe1ea; }
+
+/* меньше дерганий при слабом железе / reduce motion */
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; }
+}
+
+/* ---------- ДНИ КАЛЕНДАРЯ ---------- */
+/* базовые переходы */
+.cal-day{
+  transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease, background-color .12s ease;
+}
+
+/* hover только для кликабельных (не past/disabled) */
+.cal-day:not(.past):hover{
+  background: #fff;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-weak);
+  transform: translateY(-1px);
+}
+
+/* если день выбран — hover чуть мягче, чтобы не спорил с selected */
+.cal-day.selected:hover{
+  box-shadow: 0 0 0 4px var(--blue-weak);
+}
+
+/* для «сегодня» оставляем внутреннее кольцо, но даем мягкий фон на hover */
+.cal-day.today:not(.past):hover{
+  background: var(--hover-bg);
+}
+
+/* ---------- НАВ-КНОПКИ КАЛЕНДАРЯ (‹ Сегодня ›) ---------- */
+/* поддержка старых классов (как в booking.html сейчас) */ /* :contentReference[oaicite:1]{index=1} */
+.month-btn,
+.month-today{
+  transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease, transform .08s ease;
+}
+.month-btn:hover,
+.month-today:hover{
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
+  transform: translateY(-1px);
+}
+
+/* если уже переведёшь на единый класс nav-btn — тот же hover применится */
+.nav-btn{
+  transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease, transform .08s ease;
+}
+.nav-btn:hover{
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+  box-shadow: 0 1px 0 rgba(0,0,0,.04);
+  transform: translateY(-1px);
+}
+
+/* ---------- ВЕРХНИЙ НАВБАР (ссылки, язык, бургер) ---------- */ /* :contentReference[oaicite:2]{index=2} */
+.nav-links a{
+  border: 1px solid transparent;        /* чтобы при hover не прыгал layout */
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease, transform .08s ease;
+}
+.nav-links a:hover{
+  background: var(--blue-weak-2);
+  border-color: var(--stroke);
+  color: #0b1f66;
+  transform: translateY(-1px);
+}
+
+/* кнопка выбора языка и бургер — тоже живые */
+.lang-btn, .burger{
+  transition: background-color .12s ease, border-color .12s ease, transform .08s ease, box-shadow .12s ease;
+}
+.lang-btn:hover, .burger:hover{
+  background: var(--hover-bg);
+  border-color: var(--hover-border);
+  transform: translateY(-1px);
+}
+

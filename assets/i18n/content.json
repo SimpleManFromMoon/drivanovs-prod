@@ -10,6 +10,16 @@
     "lv": "Palīdzu atgūt skaidrību un mieru",
     "en": "Helping you regain clarity and calm"
   },
+  "home.cta": {
+    "ru": "Записаться на консультацию",
+    "lv": "Pieteikties konsultācijai",
+    "en": "Make an appointment"
+  },
+  "home.more": {
+    "ru": "Узнать больше",
+    "lv": "Uzzināt vairāk",
+    "en": "Get more information"
+  },
   "home.lead_md": {
     "ru": "Консультации психиатра. Очно в Риге и онлайн. Запись — в пару кликов.",
     "lv": "Psihiatra konsultācijas. Klātienē Rīgā un tiešsaistē. Pieraksts – pāris klikšķi.",
@@ -51,15 +61,25 @@
     "lv": "Pieraksts",
     "en": "Booking"
   },
+  "booking.chosen": {
+    "ru": "Вы выбрали:",
+    "lv": "Jūs izvēlējāties:",
+    "en": "You selected:"
+  },
   "booking.hint": {
     "ru": "1) Выберите дату и время. 2) Заполните контактные данные. 3) Нажмите «Забронировать».",
     "lv": "1) Izvēlieties datumu un laiku. 2) Aizpildiet datus. 3) Spiediet “Rezervēt”.",
     "en": "1) Pick date & time. 2) Fill details. 3) Press “Book”."
   },
+  "booking.title": {
+    "ru": "Записаться на консультацию",
+    "lv": "Pieteikties konsultācijai",
+    "en": "Make an appointment"
+  },
   "booking.available": {
-    "ru": "Доступные слоты —",
-    "lv": "Pieejamie laiki —",
-    "en": "Available slots —"
+    "ru": "Выберете время консультации:",
+    "lv": "Izvēlēties konsultācijas laiku:",
+    "en": "Choose time of the consultation:"
   },
   "booking.chosen": {
     "ru": "Вы выбрали:",
@@ -164,6 +184,11 @@
     "lv": "P",
     "en": "Mon"
   },
+  "cal.today": {
+    "ru": "Сегодня",
+    "lv": "Šodien",
+    "en": "Today"
+  },
   "nav.lang": {
     "ru": "RU",
     "lv": "LV",
@@ -177,5 +202,61 @@
   "form.checking": { "ru": "Проверяем…", "lv": "Pārbaudām…", "en": "Checking…" },
   "form.booking":  { "ru": "Бронируем…",  "lv": "Rezervējam…", "en": "Booking…" },
   "type.office": { "ru":"очно", "lv":"klātienē", "en":"in-person" },
-  "type.online": { "ru":"онлайн", "lv":"tiešsaistē", "en":"online" }
+  "type.online": { "ru":"онлайн", "lv":"tiešsaistē", "en":"online" 
+  },
+  "home.lead": {
+    "ru": "Консультации психиатра. Очно в Риге и онлайн. Запись — в пару кликов.",
+    "lv": "Psihiatra konsultācijas. Klātienē Rīgā un tiešsaistē. Pieraksts – pāris klikšķi.",
+    "en": "Psychiatry consultations. In Riga and online. Booking takes a few clicks."
+  },
+  "booking.legend": {
+    "ru": "• Точка под датой — есть свободное время. Нажмите дату, затем выберите время. После бронирования запись появится в вашем календаре.",
+    "lv": "• Punkts zem datuma nozīmē brīvus laikus. Spiediet uz datuma, pēc tam izvēlieties laiku. Pēc rezervācijas pieraksts parādīsies jūsu kalendārā.",
+    "en": "• A dot under a date means available times. Pick a date, then a time. After booking, the event appears in your calendar."
+  },
+  "about.body": {
+    "ru": "Я — врач-психиатр. <b>Помогаю</b> при тревоге, депрессии и бессоннице. Приём очно и онлайн.",
+    "lv": "Esmu psihiatrs. <b>Palīdzu</b> trauksmes, depresijas un bezmiega gadījumos. Pieņemu klātienē un tiešsaistē.",
+    "en": "I’m a psychiatrist. <b>I help</b> with anxiety, depression and insomnia. In-person and online."
+  },
+  "rules.body": {
+    "ru": "— Оплата до визита.<br>— Отмена за <b>24 часа</b>.<br>— Онлайн — Google Meet.",
+    "lv": "— Apmaksa pirms vizītes.<br>— Atcelšana <b>24 h</b> iepriekš.<br>— Tiešsaistē — Google Meet.",
+    "en": "— Payment before the session.<br>— Cancellation <b>24 h</b> in advance.<br>— Online — Google Meet."
+  },
+  "form.mode.in_person": {
+    "ru": "Очный визит",
+    "lv": "Klātienē",
+    "en": "In person"
+  },
+  "form.mode.online": {
+    "ru": "Онлайн (Google Meet)",
+    "lv": "Tiešsaistē (Google Meet)",
+    "en": "Online (Google Meet)"
+  },
+  "form.notes": {
+    "ru": "Комментарий",
+    "lv": "Komentārs",
+    "en": "Comment"
+  },
+  "form.notes.ph": {
+    "ru": "Коротко о запросе (до 600 символов)",
+    "lv": "Īsi par pieprasījumu (līdz 600 rakstzīmēm)",
+    "en": "Brief note (up to 600 chars)"
+  },
+  "form.title": {
+    "ru": "Ваши контактные данные",
+    "lv": "Jūsu kontaktinformācija ",
+    "en": "Your contact information"
+  },
+  "form.date": {
+    "ru": "Дата консультации",
+    "lv": "konsultācijas datums",
+    "en": "Date of consultation"
+  },
+  "form.time": {
+    "ru": "Время консультации",
+    "lv": "Konsultācijas laiks",
+    "en": "Time of consultation"
+  }
 }

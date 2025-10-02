@@ -135,19 +135,19 @@
       const isToday = ds === today;
       const isSel = state.selectedDate === ds;
       const isDisabled = isPastDateStr(ds);
-      html += `<button class="cal-day${inMonth?'':' dim'}${isToday?' today':''}${isSel?' selected':''}${isDisabled?' past':''}"
-                      data-id="${ds}" ${isDisabled?'disabled aria-disabled="true"':''}>
-                 <div class="cal-num">${d.getDate()}</div>
-                 <div class="cal-dots">${isDisabled?'':dotsHtml(ds)}</div>
-               </button>`;
+      html += `<button class="cal-day${inMonth?'':' dim'}${isToday?' today':''}${isSel?' selected':''}${isDisabled?' past':''}" data-id="${ds}" ${isDisabled?'disabled aria-disabled="true"':''}>
+        <div class="cal-num">${d.getDate()}</div>
+        <div class="cal-dots">${isDisabled?'':dotsHtml(ds)}</div>
+      </button>`;
     }
 
-    // ВОТ ЭТОГО НЕ ХВАТАЛО:
-    gridEl().innerHTML = html;
+    // ВСТАВЛЯЕМ в DOM
+    const grid = gridEl();
+    grid.innerHTML = html;
 
-    // навешиваем клики только на доступные дни
-    gridEl().querySelectorAll('.cal-day').forEach(b=>{
-      if(!b.disabled) b.addEventListener('click', ()=> selectDate(b.dataset.id));
+    // Навешиваем слушатели один раз, после вставки
+    grid.querySelectorAll('.cal-day:not([disabled])').forEach(b=>{
+      b.addEventListener('click', ()=> selectDate(b.dataset.id));
     });
 
     const monthName = d0.toLocaleString(undefined,{month:'long'});
@@ -172,47 +172,61 @@
 
   function renderSlotsList(dateStr){
     const obj = state.daysMap.get(dateStr) || {office:[], online:[]};
+
     let items = [];
     if(state.filters.office) (obj.office||[]).forEach(t=> items.push({kind:'office', t}));
     if(state.filters.online) (obj.online||[]).forEach(t=> items.push({kind:'online', t}));
 
-    // убираем прошлые слоты (для вчера/раньше — всё; для сегодня — прошедшие минуты)
-    items = items.filter(({t}) => !isPastDateTime(dateStr, t));
-    
-    items.sort((a,b)=> a.t.localeCompare(b.t));
+    // фильтруем прошлое ДО отрисовки
+    items = items.filter(({t}) => !isPastDateTime(dateStr, t))
+                 .sort((a,b)=> a.t.localeCompare(b.t));
 
     const el = slotsEl();
-    el.innerHTML = '';
-    const legend = `<div class="slot-legend">
-      <span><i style="background:${CFG.COLORS.office}"></i> ${TYPE_NAME.office}</span>
-      <span><i style="background:${CFG.COLORS.online}"></i> ${TYPE_NAME.online}</span>
-    </div>`;
-    el.insertAdjacentHTML('beforeend', legend);
+    el.innerHTML = '';            // ← легенду больше не рисуем
 
     if(items.length===0){ setNoSlotsMsg(true); return; } else { setNoSlotsMsg(false); }
 
     items.forEach(({kind,t})=>{
-      const price = priceFor(kind,dateStr);
+      const price = priceFor(kind,dateStr);            // число или null
+      const priceTxt = price ? `${price}€` : '';
+      const kindTxt  = TYPE_NAME[kind];                // «очно» / «онлайн»
+
       const b = document.createElement('button');
-      b.className = `slot slot--${kind}`;
+      b.type = 'button';
+      b.className = `slot-card slot--${kind}`;         // новый стиль карточки
       b.dataset.t = t; b.dataset.kind = kind;
-      b.textContent = price ? `${t} · ${TYPE_NAME[kind]} · ${price}€` : `${t} · ${TYPE_NAME[kind]}`;
+      b.setAttribute('aria-label', `${t} ${kindTxt} ${priceTxt}`);
+
+      // ВЕРСТКА карточки: цена (мелко) сверху, ВРЕМЯ по центру, формат снизу
+      b.innerHTML = `
+        <div class="slot-card__price">${priceTxt}</div>
+        <div class="slot-card__time">${t}</div>
+        <div class="slot-card__kind">${kindTxt}</div>
+      `;
+
       b.addEventListener('click', ()=>{
         timeInput().value = t;
         (kindInput()||{}).value = kind;
-        if(modeSelect()){ modeSelect().value = (kind==='office'?'in_person':'online'); modeSelect().setAttribute('disabled','disabled'); }
+        if(modeSelect()){
+          modeSelect().value = (kind==='office'?'in_person':'online');
+          modeSelect().setAttribute('disabled','disabled');
+        }
         state.selectedTime = t; state.selectedKind = kind; state.selectedDate = dateStr;
         dateInput().value = dateStr;
-        el.querySelectorAll('.slot').forEach(x=>x.classList.remove('selected'));
+
+        el.querySelectorAll('.slot-card').forEach(x=>x.classList.remove('selected'));
         b.classList.add('selected');
+
         if(chosenEl()){
-          const priceTxt = price ? ` · ${price}€` : '';
-          chosenEl().textContent = `${TYPE_NAME[kind]} · ${t}${priceTxt}`;
+          const p = price ? ` · ${price}€` : '';
+          chosenEl().textContent = `${kindTxt} · ${t}${p}`;
         }
       });
+
       el.appendChild(b);
     });
   }
+
 
   function selectDate(ds){
     state.selectedDate = ds;
