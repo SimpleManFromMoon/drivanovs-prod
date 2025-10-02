@@ -76,9 +76,14 @@
     "lv": "Pieteikties konsultācijai",
     "en": "Make an appointment"
   },
-  "booking.available": {
-    "ru": "Выберете время консультации:",
-    "lv": "Izvēlēties konsultācijas laiku:",
+  "booking.date": {
+    "ru": "Выберете дату:",
+    "lv": "Izvēlēties datumu:",
+    "en": "Choose date:"
+  },
+  "booking.time": {
+    "ru": "Выберете время:",
+    "lv": "Izvēlēties laiku:",
     "en": "Choose time of the consultation:"
   },
   "booking.chosen": {
